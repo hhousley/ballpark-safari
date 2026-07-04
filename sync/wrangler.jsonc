@@ -1,0 +1,16 @@
+{
+  // Ballpark Safari — call-sync backend.
+  // A single Durable Object per game holds an append-only log of everyone's
+  // "Call this at-bat" predictions. Clients POST a call when they lock it in
+  // and GET the log on a poll; scoring is graded deterministically on-device.
+  "name": "ballpark-safari-sync",
+  "main": "src/index.js",
+  "compatibility_date": "2025-05-01",
+  "observability": { "enabled": true },
+  "durable_objects": {
+    "bindings": [{ "name": "CALLS", "class_name": "CallLog" }]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["CallLog"] }
+  ]
+}

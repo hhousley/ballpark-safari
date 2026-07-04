@@ -269,7 +269,7 @@
     <div class="tabpane" data-pane="ranks">
       <div class="mast" style="padding:12px 14px">
         <div class="kicker">Live standings</div><h1 style="font-size:23px">The Leaderboard</h1>
-        <div class="sub">Live fantasy scores from the game, plus the at-bats your family calls right.</div>
+        <div class="sub">Live fantasy scores, plus the at-bats everyone calls right — synced across all our phones.</div>
       </div>
       <div class="seg"><button data-view="indiv" class="on">Individuals</button><button data-view="fam">Family herds</button></div>
       <div class="card" style="padding:0;margin-top:12px" id="lbEl"></div>
@@ -294,7 +294,7 @@
       <p class="muted" style="margin:6px 2px 0">Catch each one around the park tonight. +2 apiece — collect all twelve.</p>
       <div class="scav" id="scavEl"></div>
       <div class="card tight" style="margin-top:14px"><label class="fld">Good to know</label><p class="muted" style="margin:0">
-        The <b>leaderboard</b> blends your live fantasy score with the <b>at-bat calls</b> your family nails on the Live tab — a hot streak of predictions can move you up the ranks. <b>Bingo and the safari hunt</b> stay as personal bonus points on this device. Have fun out there. 🦁⚾</p></div>
+        The <b>leaderboard</b> blends your live fantasy score with the <b>at-bat calls</b> you nail on the Live tab — and during the real game those calls sync across everyone's phones, so a hot streak moves you up the shared ranks and the whole family sees the flash when someone calls it. <b>Bingo and the safari hunt</b> stay as personal bonus points on this device. Have fun out there. 🦁⚾</p></div>
     </div>
 
     <div class="tabs">
@@ -346,6 +346,14 @@ const SERIES_START="2026-07-07", SERIES_END="2026-07-09";
 const TEAMS={135:{ab:"SD",cls:"sd",name:"Padres"},109:{ab:"AZ",cls:"az",name:"D-backs"}};
 const DRAFT_SEED=70977; // fixed => identical draft on every device
 
+/* ---------- call-sync backend (Cloudflare Worker + Durable Object) ---------- */
+const SYNC={
+  url:"https://ballpark-safari-sync.comefollowme.workers.dev",
+  game:"padres-dbacks-2026-07-09",   // one shared call-log per game night
+  pass:"safari-2026",                // matches the Worker's passcode
+  on:true                            // set false to run fully local (no sync)
+};
+
 /* fallback line-ups (preview only; real active rosters load when online) */
 const SAMPLE={135:[
  {id:-1,name:"Fernando Tatis Jr.",pos:"RF",num:23,hit:1},{id:-2,name:"Manny Machado",pos:"3B",num:13,hit:1},
@@ -364,10 +372,13 @@ let LIVE={mode:"sim",feed:null,trackedLabel:"",trackedState:""};
 let sim=null, liveT=null, simT=null;
 let STAT={};                 // playerId -> stat line
 let COMPLETED=[];            // normalized completed plays
-let seenCount=0;             // for prediction grading
 let ROSTERS=SAMPLE, rostersLive=false, probables={home:null,away:null};
 let BONUS={predict:0,scav:0,bingo:null,scavMarks:[],pending:null,streak:0,lastResult:null};
 let curView="indiv";
+let CALLS_LOG=[];              // shared append-only log of everyone's at-bat calls
+let flashedCalls=new Set();    // won calls already celebrated, so we don't re-flash
+let seenPending=new Set();     // calls we watched while still unresolved (only these flash on resolve)
+let callsT=null;               // poll timer for the shared log
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -418,10 +429,7 @@ function renderPicker(){
 }
 let booted=false;
 function defaultBonus(){return {predict:0,scav:0,bingo:null,scavMarks:[],pending:null,streak:0,lastResult:null};}
-function loadBonusFor(pid){BONUS=defaultBonus();const s=lget("safari:bonus:"+pid);if(s)Object.assign(BONUS,s);if(PEOPLE[pid])PEOPLE[pid].callPts=BONUS.predict||0;}
-/* pull every person's saved correct-call points off this device so the leaderboard reflects everyone tracked here */
-function callPtsFor(pid){const s=lget("safari:bonus:"+pid);return s&&s.predict?s.predict:0;}
-function loadAllCallPts(){PEOPLE.forEach(p=>p.callPts=callPtsFor(p.pid));}
+function loadBonusFor(pid){BONUS=defaultBonus();const s=lget("safari:bonus:"+pid);if(s)Object.assign(BONUS,s);}
 function chooseMe(pid){
   ME=PEOPLE[pid];
   loadBonusFor(pid);
@@ -438,7 +446,7 @@ function switchTo(pid){
   closeSheet();
   toast("Now watching "+ME.name);
 }
-function refreshPerson(){openCards.clear();buildBingo(false);renderRoster();renderStandings();renderPred();renderSafari();updateViewbar();window.scrollTo(0,0);}
+function refreshPerson(){openCards.clear();applyCallScores();buildBingo(false);renderRoster();renderStandings();renderPred();renderSafari();updateViewbar();window.scrollTo(0,0);}
 
 /* --- switcher sheet: one phone covers several people --- */
 function openSheet(){if(!ME)return;renderSheet();$("#sheetBack").classList.add("on");}
@@ -513,6 +521,7 @@ function scoreFrom(plays){
 function recompute(){
   STAT=scoreFrom(COMPLETED);
   PEOPLE.forEach(p=>p.pts=p.roster.reduce((s,pl)=>s+((STAT[pl.id]||{}).pts||0),0));
+  applyCallScores();   // fold in each person's correct at-bat calls
   paintAll();
 }
 function paintAll(){renderRoster();renderBoard();renderTicker();renderPred();renderStandings();updateViewbar();}
@@ -561,8 +570,13 @@ async function attemptLive(){
     LIVE.mode="live";LIVE.feed=feed;LIVE.trackedState=feed.gameData.status.abstractGameState;
     clearInterval(simT);simT=null;sim=null;
     const done=liveCompleted(feed);
-    if(!wasLive){seenCount=done.length;BONUS.pending=null;saveBonus();}
-    gradeNew(done); COMPLETED=done; recompute();
+    if(!wasLive){                        // just flipped from preview/sim into the real game
+      CALLS_LOG=[];flashedCalls.clear();seenPending.clear();  // sim indices ≠ live indices — start clean
+      BONUS.pending=null;saveBonus();
+      startCallSync();                   // begin sharing calls across everyone's phones
+    }
+    COMPLETED=done; recompute();
+    pollCalls();                         // pull the shared call log right away
   }catch(e){ if(LIVE.mode!=="live"){ if(!simT)runSim(); } }
 }
 function fmtGame(iso){try{return new Date(iso).toLocaleString("en-US",{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit",timeZone:"America/Los_Angeles"})+" PT";}catch(e){return "";}}
@@ -576,7 +590,7 @@ function runSim(){
   const sdArm=all.find(p=>p.team===135&&!p.hit)||{id:-900,name:"SD Starter"};
   const azArm=all.find(p=>p.team===109&&!p.hit)||{id:-901,name:"AZ Starter"};
   sim={inning:1,half:"T",outs:0,runs:{135:0,109:0},bases:[0,0,0],order:{135:0,109:0},curBat:null,curPit:null};
-  COMPLETED=[];seenCount=0;
+  COMPLETED=[];CALLS_LOG=[];flashedCalls.clear();seenPending.clear();stopCallSync();  // preview = local practice, not synced
   const bump=()=>{if(sim.half==="T"){sim.half="B";}else{sim.half="T";sim.inning++;}sim.outs=0;sim.bases=[0,0,0];};
   const tick=()=>{
     const off=sim.half==="T"?109:135, lineup=off===135?sdBats:azBats;
@@ -597,7 +611,6 @@ function runSim(){
     const play={ev,batter:bat.id,pitcher:pit.id,rbi,runners,desc:D[ev]+(rbi?` (${rbi} in)`:""),half:sim.half+sim.inning,hot:ev==="home_run"};
     COMPLETED.push(play);
     if(sim.outs>=3)bump();
-    gradeNew(COMPLETED);
     recompute();
     if(ev==="home_run"&&ME&&ME.roster.some(p=>p.id===bat.id))toast(`🎉 ${bat.name.split(" ").slice(-1)[0]} homered — that's yours! +4`);
   };
@@ -734,28 +747,87 @@ function renderTicker(){
 ================================================================= */
 const CAT={single:"hit",double:"hit",triple:"hit",home_run:"hr",walk:"walk",intent_walk:"walk",hit_by_pitch:"walk",strikeout:"k",strikeout_double_play:"k"};
 function catOf(ev){return CAT[ev]||"out";}
-function gradeNew(plays){
-  if(plays.length>seenCount){
-    const fresh=plays.slice(seenCount);seenCount=plays.length;
-    if(BONUS.pending){
-      const outcome=catOf(fresh[0].ev), choice=BONUS.pending;
-      let win=false,add=0;
-      if(choice===outcome){win=true;add=(outcome==="hr"?10:3);}
-      else if(choice==="hit"&&outcome==="hr"){win=true;add=3;}
-      if(win){
-        BONUS.predict+=add;BONUS.streak++;
-        if(BONUS.streak>=3){add+=2;BONUS.predict+=2;}
-        BONUS.lastResult=`✅ ${labelCat(outcome)} — +${add}${BONUS.streak>=3?" (streak!)":""}`;
-        if(ME)ME.callPts=BONUS.predict;      // correct calls now count toward the leaderboard
-        flashCall(ME,add,BONUS.streak>=3);
-        renderStandings();updateViewbar();
-      }
-      else{BONUS.streak=0;BONUS.lastResult=`❌ It was a ${labelCat(outcome)}. Next one!`;}
-      BONUS.pending=null;saveBonus();
+function gradeCall(choice,ev){
+  const outcome=catOf(ev);
+  if(choice===outcome)return{win:true,add:outcome==="hr"?10:3,outcome};
+  if(choice==="hit"&&outcome==="hr")return{win:true,add:3,outcome};   // a homer still counts as a "hit" call
+  return{win:false,add:0,outcome};
+}
+/* Recompute everyone's call points from the shared log, graded against the completed plays.
+   Same log + same plays => identical scores on every phone. Flashes newly-won family calls. */
+function applyCallScores(){
+  PEOPLE.forEach(p=>p.callPts=0);
+  const byPid={};
+  CALLS_LOG.forEach(c=>{(byPid[c.pid]||(byPid[c.pid]=[])).push(c);});
+  for(const pid in byPid){
+    const list=byPid[pid].sort((a,b)=>a.atBat-b.atBat||a.ts-b.ts);
+    let streak=0,sum=0;
+    for(const c of list){
+      const play=COMPLETED[c.atBat];
+      if(!play){seenPending.add(c.id);continue;}   // at-bat not finished yet — but we've now seen it live
+      const g=gradeCall(c.choice,play.ev);
+      if(g.win){streak++;let add=g.add;if(streak>=3)add+=2;sum+=add;maybeFlash(c,add,streak>=3);}
+      else streak=0;
     }
+    if(PEOPLE[pid])PEOPLE[pid].callPts=sum;
   }
+  syncMyPredUI();
+}
+/* flash only for calls we watched go from pending -> resolved (never for history loaded already-resolved) */
+function maybeFlash(call,pts,streak){
+  if(flashedCalls.has(call.id))return;
+  flashedCalls.add(call.id);
+  if(!seenPending.has(call.id))return;
+  const who=PEOPLE[call.pid];
+  if(who&&ME&&who.fam===ME.fam)flashCall(who,pts,streak);   // someone in my herd nailed it
+}
+/* keep the active person's own prediction box in sync with the shared log */
+function syncMyPredUI(){
+  if(!ME)return;
+  const mine=CALLS_LOG.filter(c=>c.pid===ME.pid);
+  const pending=mine.find(c=>c.atBat>=COMPLETED.length);
+  BONUS.pending=pending?pending.choice:null;
+  const resolved=mine.filter(c=>COMPLETED[c.atBat]).sort((a,b)=>b.atBat-a.atBat)[0];
+  if(resolved){const g=gradeCall(resolved.choice,COMPLETED[resolved.atBat].ev);
+    BONUS.lastResult=g.win?`✅ ${labelCat(g.outcome)} — you nailed it!`:`❌ It was a ${labelCat(g.outcome)}. Next one!`;}
 }
 function labelCat(c){return {hit:"hit",hr:"home run",walk:"walk",k:"strikeout",out:"out"}[c]||c;}
+
+/* =================================================================
+   CALL SYNC — post your call, poll everyone else's (live game only)
+================================================================= */
+function makeCall(choice){
+  if(!ME)return;
+  const atBat=COMPLETED.length;                 // the play this call will be graded against
+  const call={id:ME.pid+":"+atBat,pid:ME.pid,fam:ME.fam,atBat,choice,ts:Date.now()};
+  CALLS_LOG=CALLS_LOG.filter(c=>c.id!==call.id).concat([call]);  // local upsert = change-your-mind
+  BONUS.pending=choice;saveBonus();
+  applyCallScores();renderPred();renderStandings();updateViewbar();
+  if(LIVE.mode==="live")postCall(call);          // only the real game is shared across phones
+}
+function mergeCalls(incoming){
+  const byId={};
+  CALLS_LOG.forEach(c=>byId[c.id]=c);
+  incoming.forEach(c=>{const e=byId[c.id];if(!e||c.ts>=e.ts)byId[c.id]=c;});  // latest ts wins
+  CALLS_LOG=Object.values(byId).sort((a,b)=>a.ts-b.ts);
+}
+async function postCall(call){
+  if(!SYNC.on||!SYNC.url)return;
+  try{
+    const r=await fetch(SYNC.url+"/call?game="+encodeURIComponent(SYNC.game),
+      {method:"POST",headers:{"content-type":"application/json","x-safari-pass":SYNC.pass},body:JSON.stringify(call)});
+    if(r.ok){const d=await r.json();mergeCalls(d.calls||[]);applyCallScores();renderStandings();updateViewbar();}
+  }catch(e){/* offline: local copy stands and resyncs on the next poll */}
+}
+async function pollCalls(){
+  if(!SYNC.on||!SYNC.url||LIVE.mode!=="live")return;
+  try{
+    const r=await fetch(SYNC.url+"/calls?game="+encodeURIComponent(SYNC.game),{cache:"no-store"});
+    if(r.ok){const d=await r.json();mergeCalls(d.calls||[]);applyCallScores();renderStandings();updateViewbar();renderPred();}
+  }catch(e){}
+}
+function startCallSync(){if(!callsT)callsT=setInterval(pollCalls,8000);}
+function stopCallSync(){clearInterval(callsT);callsT=null;}
 function renderPred(){
   const box=$("#predBox");const cur=currentIds();
   if(!cur.batter){box.innerHTML="";return;}
@@ -768,7 +840,7 @@ function renderPred(){
     </div>
     <div class="predbtns">${opts.map(o=>`<button data-c="${o[0]}" class="${BONUS.pending===o[0]?'sel':''}">${o[1]}</button>`).join("")}</div>
     <div class="predresult">${BONUS.pending?"Locked in — watch it play out ⚾":(BONUS.lastResult||"Tap your call before the pitch.")}</div></div>`;
-  box.querySelectorAll("button").forEach(b=>b.onclick=()=>{BONUS.pending=b.dataset.c;saveBonus();renderPred();});
+  box.querySelectorAll("button").forEach(b=>b.onclick=()=>makeCall(b.dataset.c));
 }
 function nameById(id){for(const p of PEOPLE)for(const pl of p.roster)if(pl.id===id)return pl.name;
   if(LIVE.feed){const pp=LIVE.feed.gameData.players;for(const k in pp)if(pp[k].id===id)return pp[k].fullName;}return null;}
@@ -831,15 +903,18 @@ const SCAV=[["🦁","Safari mascot or costume"],["🐆","Someone in animal print
 function renderSafari(){
   if(!ME)return;
   $("#safariHi").textContent=ME.name+"'s safari";
-  const bonus=BONUS.predict+BONUS.scav;
+  const num=n=>fmt(n).replace('+','');
   $("#youCard").innerHTML=`<div style="font-size:52px">${ME.spirit}</div>
     <div style="font:700 20px/1 'Oswald';margin-top:6px">${esc(ME.name)}</div>
     <div class="muted" style="margin-top:4px">${FAMILIES[ME.fam].animal} ${esc(FAMILIES[ME.fam].name)} · the ${FAMILIES[ME.fam].herd}</div>
-    <div style="display:flex;gap:10px;justify-content:center;margin-top:14px">
-      <div><div class="bignum">${fmt(ME.pts).replace('+','')}</div><div class="muted">team score</div></div>
-      <div style="width:1px;background:var(--line)"></div>
-      <div><div class="bignum" style="color:var(--savanna)">${bonus}</div><div class="muted">safari bonus</div></div>
-    </div>`;
+    <div style="display:flex;gap:8px;justify-content:center;align-items:center;margin-top:14px">
+      <div><div class="bignum">${num(ME.pts)}</div><div class="muted">fantasy</div></div>
+      <div style="width:1px;align-self:stretch;background:var(--line)"></div>
+      <div><div class="bignum" style="color:var(--gold-2)">${num(ME.callPts||0)}</div><div class="muted">calls</div></div>
+      <div style="width:1px;align-self:stretch;background:var(--line)"></div>
+      <div><div class="bignum" style="color:var(--savanna)">${num(BONUS.scav)}</div><div class="muted">safari hunt</div></div>
+    </div>
+    <div class="muted" style="margin-top:8px">Fantasy + calls = your <b>rank score</b> of ${num(total(ME))}. Safari hunt is personal bonus.</div>`;
   if(!BONUS.scavMarks.length)BONUS.scavMarks=Array(SCAV.length).fill(false);
   const el=$("#scavEl");el.innerHTML="";
   SCAV.forEach((s,i)=>{const d=document.createElement("div");d.className="sv"+(BONUS.scavMarks[i]?" got":"");
@@ -857,7 +932,6 @@ async function enterApp(){
   show("app");
   await loadRosters();
   buildDraft();
-  loadAllCallPts();
   buildBingo(false);
   renderRoster();renderBoard();renderTicker();renderStandings();renderPred();renderSafari();updateViewbar();
   startLive();
