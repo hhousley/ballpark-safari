@@ -2,7 +2,7 @@ import { DurableObject } from "cloudflare:workers";
 
 /* Shared game passcode. Also baked into the client. Not real security — it just
    keeps drive-by writes off a public endpoint for a private family game. */
-const PASS = "safari-2026";
+const PASS = "leavitt2026";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
