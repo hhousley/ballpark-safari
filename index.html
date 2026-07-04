@@ -1,0 +1,784 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ballpark Safari — Padres vs D-backs · Family Night</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Libre+Franklin:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F4EDDD; --paper-2:#EAE0CA;
+    --ink:#241C12; --ink-soft:#6E5F46; --line:#CBBB98;
+    --friar:#3A2317; --friar-2:#54331F; --gold:#F0B429; --gold-2:#D99411;
+    --sedona:#A71930; --savanna:#7A8B3C; --field:#3E7350;
+    --shadow:0 2px 0 rgba(36,28,18,.12), 0 10px 24px rgba(36,28,18,.10);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:"Libre Franklin",system-ui,-apple-system,sans-serif;color:var(--ink);
+    background:
+      repeating-linear-gradient(0deg,transparent 0 30px,rgba(203,187,152,.30) 30px 31px),
+      radial-gradient(120% 80% at 50% -10%, #FBF4E4 0%, var(--paper) 55%, var(--paper-2) 100%);
+    background-attachment:fixed;-webkit-text-size-adjust:100%;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  h1,h2,h3,.disp{font-family:"Oswald",sans-serif;letter-spacing:.5px;margin:0}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+  .wrap{max-width:540px;margin:0 auto;padding:14px 14px 96px}
+  .screen{display:none} .screen.on{display:block;animation:fade .3s ease both}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .mast{background:linear-gradient(180deg,var(--friar),var(--friar-2));color:var(--paper);border-radius:14px;
+    padding:14px 16px;box-shadow:var(--shadow);border:2px solid #23140c;position:relative;overflow:hidden}
+  .mast:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 22px,rgba(240,180,41,.08) 22px 23px);pointer-events:none}
+  .mast .kicker{font:600 11px/1.3 "JetBrains Mono",monospace;letter-spacing:1.5px;color:var(--gold);text-transform:uppercase}
+  .mast h1{font-size:30px;font-weight:700;line-height:.95;margin-top:6px;color:#fff}
+  .mast .sub{font-size:12.5px;color:#eaddc4;margin-top:6px}
+  .mast .safari{position:absolute;top:12px;right:12px;background:var(--savanna);color:#fff;font:700 10px/1.2 "JetBrains Mono";
+    letter-spacing:.5px;padding:6px 9px;border-radius:20px;text-align:center;max-width:120px}
+
+  .card{background:#FFFCF4;border:1.5px solid var(--line);border-radius:12px;padding:14px;box-shadow:var(--shadow);margin-top:12px}
+  .card.tight{padding:11px 12px}
+  .muted{color:var(--ink-soft);font-size:12.5px;line-height:1.55}
+  .center{text-align:center}
+  label.fld{display:block;font:600 11px/1 "JetBrains Mono",monospace;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-soft);margin:2px 0 8px}
+  .btn{display:block;width:100%;text-align:center;font-family:"Oswald";font-weight:700;font-size:17px;letter-spacing:.5px;
+    padding:13px;border-radius:12px;border:2px solid #23140c;background:linear-gradient(180deg,var(--gold),var(--gold-2));color:#3a2317;box-shadow:var(--shadow);cursor:pointer;transition:transform .06s}
+  .btn:active{transform:translateY(1px)}
+  .btn.ghost{background:#FFFCF4;color:var(--friar);border-color:var(--line)}
+  .btn.sm{font-size:14px;padding:10px}
+
+  .sectitle{display:flex;align-items:center;gap:10px;margin:20px 2px 2px}
+  .sectitle h2{font-size:18px;font-weight:600}
+  .sectitle .ln{flex:1;height:2px;background:repeating-linear-gradient(90deg,var(--line) 0 6px,transparent 6px 10px)}
+
+  /* identity picker */
+  .fam{border:1.5px solid var(--line);border-radius:12px;overflow:hidden;margin-top:11px;background:#FFFCF4;box-shadow:var(--shadow)}
+  .fam-h{display:flex;align-items:center;gap:11px;padding:11px 13px;cursor:pointer}
+  .fam-h .em{font-size:26px}
+  .fam-h .t{font:700 17px/1 "Oswald"}
+  .fam-h .s{font:600 10px/1 "JetBrains Mono";letter-spacing:1px;color:var(--ink-soft);text-transform:uppercase;margin-top:4px}
+  .fam-h .cnt{margin-left:auto;font:700 13px/1 "JetBrains Mono";color:#fff;padding:5px 9px;border-radius:20px}
+  .people{display:none;flex-wrap:wrap;gap:8px;padding:0 12px 12px}
+  .fam.open .people{display:flex}
+  .chip{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);border-radius:22px;padding:7px 12px 7px 8px;background:var(--paper);cursor:pointer;font:600 14px/1 "Libre Franklin"}
+  .chip .cem{font-size:18px}
+  .chip small{color:var(--ink-soft);font:600 11px/1 "JetBrains Mono";margin-left:2px}
+  .chip:active{background:var(--gold)}
+
+  /* tabs */
+  .tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;background:linear-gradient(180deg,#2c1a10,var(--friar));
+    border-top:2px solid var(--gold);padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+  .tab{flex:1;text-align:center;color:#d8c6a6;font:600 10.5px/1.2 "Libre Franklin";padding:7px 2px;border-radius:10px;cursor:pointer}
+  .tab .ic{font-size:19px;display:block;margin-bottom:3px}
+  .tab.on{background:rgba(240,180,41,.18);color:#fff}
+  .tabpane{display:none} .tabpane.on{display:block;animation:fade .25s ease both}
+
+  /* scoreboard */
+  .board{background:#12100c;border:2px solid #000;border-radius:14px;padding:12px;color:#ffcf3f;box-shadow:var(--shadow)}
+  .board .teams{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .team{display:flex;align-items:center;gap:9px;min-width:0}
+  .logo{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font:700 12px/1 "Oswald";color:#fff;flex:0 0 auto;border:2px solid rgba(255,255,255,.25)}
+  .logo.sd{background:var(--friar)} .logo.az{background:var(--sedona)}
+  .team .nm{font:600 13px/1 "Oswald";letter-spacing:1px;color:#f4ead2;text-transform:uppercase}
+  .runs{font:700 34px/1 "JetBrains Mono",monospace;color:#fff}
+  .board .mid{text-align:center;padding:0 4px}
+  .board .inn{font:700 14px/1 "JetBrains Mono",monospace;color:#ffcf3f;letter-spacing:1px}
+  .countbar{display:flex;justify-content:center;gap:18px;margin-top:10px;padding-top:10px;border-top:1px dashed rgba(255,207,63,.25)}
+  .cb{font:700 12px/1 "JetBrains Mono",monospace;color:#e8dab0;text-align:center}
+  .dots{display:inline-flex;gap:4px;margin-left:2px}
+  .dot{width:10px;height:10px;border-radius:50%;border:1.5px solid #6a5c30}
+  .dot.f{background:#ffcf3f;border-color:#ffcf3f}
+  .diamond{width:66px;height:66px;position:relative;margin:0 auto}
+  .base{position:absolute;width:18px;height:18px;background:#3a3320;border:2px solid #6a5c30;transform:rotate(45deg)}
+  .base.on{background:#ffcf3f;border-color:#fff;box-shadow:0 0 8px #ffcf3f}
+  .b2{top:2px;left:24px}.b1{top:24px;right:2px}.b3{top:24px;left:2px}.hp{bottom:2px;left:25px;width:14px;height:14px;background:#efe3c4}
+
+  .banner{border-radius:10px;padding:9px 12px;font:600 12px/1.45 "Libre Franklin";margin-top:12px;display:flex;gap:8px;align-items:center}
+  .banner.live{background:#e7f4ec;border:1px solid #bfe0cd;color:#1f5c3a}
+  .banner.sim{background:#fdf0da;border:1px solid #eccf92;color:#7a5a17}
+  .live-dot{width:9px;height:9px;border-radius:50%;background:#2f7d4f;animation:blip 1.4s infinite;flex:0 0 auto}
+  @keyframes blip{0%{box-shadow:0 0 0 0 rgba(47,125,79,.6)}70%{box-shadow:0 0 0 8px rgba(47,125,79,0)}100%{box-shadow:0 0 0 0 rgba(47,125,79,0)}}
+
+  /* player cards */
+  .pc{background:#FFFCF4;border:1.5px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);margin-top:11px}
+  .pc.up{border-color:var(--gold);box-shadow:0 0 0 3px rgba(240,180,41,.5),var(--shadow);animation:pulse 1.4s infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 3px rgba(240,180,41,.5),var(--shadow)}50%{box-shadow:0 0 0 6px rgba(240,180,41,.22),var(--shadow)}}
+  .pc-head{display:flex;align-items:center;gap:11px;padding:11px 12px;cursor:pointer}
+  .num{width:40px;height:40px;border-radius:9px;flex:0 0 auto;display:grid;place-items:center;color:#fff;font:700 17px/1 "JetBrains Mono",monospace}
+  .num.sd{background:var(--friar)} .num.az{background:var(--sedona)}
+  .face{width:46px;height:46px;border-radius:10px;flex:0 0 auto;position:relative;overflow:hidden}
+  .face.sd{background:var(--friar)} .face.az{background:var(--sedona)}
+  .face .fnum{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font:700 17px/1 "JetBrains Mono",monospace}
+  .face img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center}
+  .predface{width:44px;height:44px;border-radius:50%;position:relative;overflow:hidden;background:var(--friar-2);flex:0 0 auto;border:2px solid var(--gold)}
+  .predface img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top center}
+  .predface span{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font:700 18px/1 "Oswald"}
+  .pc-name{font:700 17px/1 "Oswald";letter-spacing:.3px}
+  .pc-meta{font:500 11px/1.3 "JetBrains Mono",monospace;color:var(--ink-soft);margin-top:3px}
+  .pc-pts{margin-left:auto;text-align:right}
+  .pc-pts b{font:700 20px/1 "JetBrains Mono",monospace}
+  .pc-pts span{display:block;font:600 9px/1 "JetBrains Mono";letter-spacing:1px;color:var(--ink-soft);text-transform:uppercase;margin-top:3px}
+  .upflag{display:inline-block;background:var(--gold);color:#3a2317;font:700 9px/1 "JetBrains Mono";letter-spacing:1px;padding:4px 6px;border-radius:6px;margin-left:6px;vertical-align:middle}
+  .pc-body{border-top:1px dashed var(--line);padding:0 12px;max-height:0;overflow:hidden;transition:max-height .3s,padding .3s}
+  .pc.open .pc-body{max-height:360px;padding:12px}
+  .bio{font-size:13.5px;line-height:1.5}
+  .statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+  .stat{background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:7px 4px;text-align:center}
+  .stat b{display:block;font:700 16px/1 "JetBrains Mono";color:var(--friar)}
+  .stat span{font:600 8.5px/1 "JetBrains Mono";letter-spacing:.5px;color:var(--ink-soft);text-transform:uppercase}
+
+  /* ticker */
+  .tick{display:flex;gap:10px;padding:10px 11px;border-bottom:1px dashed var(--line);align-items:flex-start}
+  .tick:last-child{border-bottom:0}
+  .tick .t{font:700 11px/1.3 "JetBrains Mono";color:var(--ink-soft);flex:0 0 auto;min-width:40px}
+  .tick .d{font-size:13px;line-height:1.45}
+  .tick.hot{background:rgba(240,180,41,.16)}
+
+  /* standings */
+  .seg{display:flex;background:var(--paper);border:1.5px solid var(--line);border-radius:11px;padding:4px;margin-top:12px}
+  .seg button{flex:1;border:0;background:transparent;font:700 13px/1 "Oswald";letter-spacing:.5px;padding:10px;border-radius:8px;color:var(--ink-soft);cursor:pointer}
+  .seg button.on{background:var(--friar);color:#fff}
+  .lb{display:flex;align-items:center;gap:11px;padding:11px 12px;border-bottom:1px dashed var(--line)}
+  .lb:last-child{border-bottom:0}
+  .rank{font:700 18px/1 "Oswald";width:26px;text-align:center;color:var(--ink-soft)}
+  .rank.g1{color:#C58A12}
+  .av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:18px;flex:0 0 auto;border:2px solid var(--line);background:#fff}
+  .lb .who{font:700 15px/1 "Oswald";letter-spacing:.3px}
+  .lb .sub{font:500 10.5px/1.3 "JetBrains Mono";color:var(--ink-soft);margin-top:3px}
+  .lb .score{margin-left:auto;font:700 20px/1 "JetBrains Mono";color:var(--friar);text-align:right}
+  .lb.me{background:rgba(240,180,41,.16)}
+  .lb.mine{background:rgba(122,139,60,.12)}
+
+  /* bingo + scavenger */
+  .grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:12px}
+  .bx{aspect-ratio:1;background:#FFFCF4;border:1.5px solid var(--line);border-radius:9px;display:grid;place-items:center;text-align:center;
+    font:600 9px/1.15 "Libre Franklin";padding:4px;cursor:pointer;position:relative}
+  .bx.free{background:var(--friar);color:#fff;font-family:"Oswald";font-size:14px}
+  .bx.hit{background:var(--gold);border-color:#3a2317;font-weight:700}
+  .bx.hit:after{content:"✕";position:absolute;font:400 26px/1 "Oswald";color:rgba(58,35,23,.25)}
+  .scav{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+  .sv{display:flex;align-items:center;gap:10px;border:1.5px solid var(--line);border-radius:11px;padding:10px;background:#FFFCF4;cursor:pointer}
+  .sv .e{font-size:24px;filter:grayscale(1);opacity:.5;transition:.2s}
+  .sv .x{font:600 11.5px/1.25 "Libre Franklin"}
+  .sv.got{background:rgba(122,139,60,.14);border-color:var(--savanna)}
+  .sv.got .e{filter:none;opacity:1}
+
+  /* predictions */
+  .pred{background:linear-gradient(180deg,#241c12,#3a2317);color:#fff;border-radius:12px;padding:13px;box-shadow:var(--shadow);border:2px solid var(--gold)}
+  .pred .q{font:700 15px/1.2 "Oswald";letter-spacing:.3px}
+  .pred .who{font:600 11px/1 "JetBrains Mono";color:var(--gold);margin-top:4px;text-transform:uppercase;letter-spacing:1px}
+  .predbtns{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:11px}
+  .predbtns button{border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.08);color:#fff;font:700 13px/1 "Oswald";
+    letter-spacing:.5px;padding:11px 4px;border-radius:9px;cursor:pointer}
+  .predbtns button:active{background:var(--gold);color:#3a2317}
+  .predbtns button.sel{background:var(--gold);color:#3a2317;border-color:#fff}
+  .predresult{margin-top:10px;font:600 12.5px/1.4 "Libre Franklin";text-align:center}
+
+  .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--friar);color:#fff;padding:12px 18px;border-radius:12px;
+    font:700 14px/1.3 "Oswald";box-shadow:var(--shadow);z-index:40;border:2px solid var(--gold);max-width:90%;text-align:center;opacity:0;transition:opacity .25s;pointer-events:none}
+  .toast.on{opacity:1}
+  .bignum{font:700 40px/1 "JetBrains Mono";color:var(--friar)}
+  /* person switcher */
+  .viewbar{position:sticky;top:0;z-index:15;display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#2c1a10,var(--friar));
+    color:#fff;border:2px solid #23140c;border-radius:0 0 14px 14px;padding:9px 12px;margin:-14px -14px 0;box-shadow:var(--shadow);cursor:pointer}
+  .vb-av{width:34px;height:34px;border-radius:50%;background:var(--friar-2);display:grid;place-items:center;font-size:18px;border:2px solid var(--gold);flex:0 0 auto}
+  .vb-t{min-width:0} .vb-t #vbName{font:700 15px/1 "Oswald";letter-spacing:.3px}
+  .vb-s{font:600 10px/1 "JetBrains Mono";color:var(--gold);letter-spacing:.5px;margin-top:3px}
+  .vb-cta{margin-left:auto;font:700 12px/1 "Oswald";letter-spacing:.5px;background:var(--gold);color:#3a2317;padding:8px 12px;border-radius:20px;flex:0 0 auto}
+  .sheet-back{position:fixed;inset:0;background:rgba(20,14,8,.55);z-index:50;display:none;align-items:flex-end;justify-content:center}
+  .sheet-back.on{display:flex;animation:fade .2s ease both}
+  .sheet{background:var(--paper);width:100%;max-width:540px;border-radius:18px 18px 0 0;padding:16px 14px calc(20px + env(safe-area-inset-bottom));
+    max-height:84vh;overflow:auto;box-shadow:0 -8px 30px rgba(0,0,0,.3);border-top:3px solid var(--gold)}
+  .sheet-h{font:700 19px/1 "Oswald";text-align:center}
+  .sheet-lbl{font:700 11px/1 "JetBrains Mono";letter-spacing:1px;text-transform:uppercase;color:var(--ink-soft);margin:15px 4px 4px}
+  .prow{display:flex;align-items:center;gap:11px;padding:11px 12px;border:1.5px solid var(--line);border-radius:11px;margin-top:7px;background:#FFFCF4;cursor:pointer}
+  .prow.cur{border-color:var(--gold);background:rgba(240,180,41,.16)}
+  .prow .pe{font-size:22px} .prow .pn{font:700 15px/1 "Oswald"}
+  .prow small{color:var(--ink-soft);font:600 11px/1 "JetBrains Mono"}
+  .prow b{margin-left:auto;font:700 16px/1 "JetBrains Mono";color:var(--friar)}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+  code{background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font:600 12px "JetBrains Mono"}
+</style>
+
+<div class="wrap">
+  <!-- ============ WHO ARE YOU ============ -->
+  <section class="screen on" id="pick">
+    <div class="mast">
+      <div class="kicker">Thu · Jul 9 · 6:40pm · Petco Park</div>
+      <h1>Ballpark<br>Safari</h1>
+      <div class="sub">Padres vs. Diamondbacks — one live game, 34 of us, seven family herds.</div>
+      <div class="safari">🦁 Zoo Safari Park Night</div>
+    </div>
+    <div class="card tight center"><p class="muted" style="margin:0">Tap your family, then tap your name. That's the whole setup — your lineup and everyone's scores load automatically.</p></div>
+    <div class="sectitle"><h2>Find yourself</h2><span class="ln"></span></div>
+    <div id="famList"></div>
+    <p class="muted center" style="margin-top:16px">Wrong person? Just reopen the link and pick again.</p>
+  </section>
+
+  <!-- ============ APP ============ -->
+  <section class="screen" id="app">
+    <div class="viewbar" id="viewbar" onclick="openSheet()">
+      <div class="vb-av" id="vbAv"></div>
+      <div class="vb-t"><div id="vbName">—</div><div class="vb-s" id="vbFam"></div></div>
+      <div class="vb-cta">Switch ▾</div>
+    </div>
+
+    <!-- MY TEAM -->
+    <div class="tabpane on" data-pane="team">
+      <div class="mast" style="padding:12px 14px">
+        <div class="kicker" id="teamKicker">Your lineup</div>
+        <h1 style="font-size:23px" id="teamHi">Your players</h1>
+        <div class="sub">Tap a card for the backstory. Gold glow = they're up right now.</div>
+      </div>
+      <div id="myRoster"></div>
+      <div class="card tight"><label class="fld">Scoring</label><p class="muted" style="margin:0">
+        <b>Batters:</b> single +1 · double +2 · triple +3 · homer +4 · walk +½ · RBI +1 each · run +1 · K −1.<br>
+        <b>Pitchers:</b> K +1 · out +¼ · hit −¼ · homer −2 · walk −¼.</p></div>
+    </div>
+
+    <!-- LIVE -->
+    <div class="tabpane" data-pane="live">
+      <div class="board" id="boardEl"></div>
+      <div id="statusBanner"></div>
+      <div id="predBox" style="margin-top:12px"></div>
+      <div class="sectitle"><h2>Play by play</h2><span class="ln"></span></div>
+      <div class="card" style="padding:0" id="tickerEl"></div>
+    </div>
+
+    <!-- STANDINGS -->
+    <div class="tabpane" data-pane="ranks">
+      <div class="mast" style="padding:12px 14px">
+        <div class="kicker">Live standings</div><h1 style="font-size:23px">The Leaderboard</h1>
+        <div class="sub">Same on every phone — it's all from the live game.</div>
+      </div>
+      <div class="seg"><button data-view="indiv" class="on">Individuals</button><button data-view="fam">Family herds</button></div>
+      <div class="card" style="padding:0;margin-top:12px" id="lbEl"></div>
+    </div>
+
+    <!-- BINGO -->
+    <div class="tabpane" data-pane="bingo">
+      <div class="mast" style="padding:12px 14px"><div class="kicker">Everyone plays</div>
+        <h1 style="font-size:23px">Safari Bingo</h1>
+        <div class="sub">See it at the park? Tap it. Five in a row = shout BINGO. Perfect for the kids and grandparents.</div></div>
+      <div class="grid5" id="bingoEl"></div>
+      <button class="btn ghost sm" id="newBingo" style="margin-top:13px">Fresh card</button>
+    </div>
+
+    <!-- SAFARI (extras) -->
+    <div class="tabpane" data-pane="safari">
+      <div class="mast" style="padding:12px 14px"><div class="kicker">Your night</div>
+        <h1 style="font-size:23px" id="safariHi">Safari card</h1>
+        <div class="sub">Your spirit animal, your personal bonus points, and a spot-it hunt around the park.</div></div>
+      <div class="card center" id="youCard"></div>
+      <div class="sectitle"><h2>Spot-it safari hunt</h2><span class="ln"></span></div>
+      <p class="muted" style="margin:6px 2px 0">Catch each one around the park tonight. +2 apiece — collect all twelve.</p>
+      <div class="scav" id="scavEl"></div>
+      <div class="card tight" style="margin-top:14px"><label class="fld">Good to know</label><p class="muted" style="margin:0">
+        The <b>leaderboard</b> is your live fantasy score — identical on everyone's phone. <b>Bingo, predictions, and the safari hunt</b> are your own bonus points, tracked just on your device. Have fun out there. 🦁⚾</p></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab on" data-tab="team"><span class="ic">⚾</span>My Team</div>
+      <div class="tab" data-tab="live"><span class="ic">📟</span>Live</div>
+      <div class="tab" data-tab="ranks"><span class="ic">🏆</span>Ranks</div>
+      <div class="tab" data-tab="bingo"><span class="ic">🎯</span>Bingo</div>
+      <div class="tab" data-tab="safari"><span class="ic">🦁</span>Safari</div>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast"></div>
+<div class="sheet-back" id="sheetBack" onclick="if(event.target===this)closeSheet()">
+  <div class="sheet">
+    <div class="sheet-h">Who are you watching?</div>
+    <p class="muted center" style="margin:4px 0 2px">One phone can cover the whole family — switch anytime.</p>
+    <div id="sheetFam"></div>
+    <button class="btn ghost sm" id="allToggle" style="margin-top:12px">Show all families</button>
+    <div id="sheetAll" style="display:none"></div>
+    <button class="btn" style="margin-top:14px" onclick="closeSheet()">Done</button>
+  </div>
+</div>
+
+<script>
+/* =================================================================
+   BALLPARK SAFARI — Padres vs Diamondbacks, family night (34 people)
+   Static single file. Deterministic fantasy scoring so every phone
+   shows the same leaderboard with no backend. Deploy to GitHub Pages.
+================================================================= */
+
+/* ---------- the crew ---------- */
+const FAMILIES=[
+ {name:"Hunter & Heather", animal:"🦁", herd:"Lions",     color:"#D99411", members:[["Hunter",37],["Heather",36],["Clara",13],["Cosette",11],["Calvin",8]]},
+ {name:"Dixon & Linda",    animal:"🐘", herd:"Elephants", color:"#6E7B8B", members:[["Dixon",43],["Linda",43],["Grace",16]]},
+ {name:"Brooke & Mac",     animal:"🦒", herd:"Giraffes",  color:"#C98A2B", members:[["Brooke",45],["Mac",49],["Xander",22],["Foster",17],["Neve",15]]},
+ {name:"Skye & Bracken",   animal:"🦓", herd:"Zebras",    color:"#5A5550", members:[["Skye",40],["Bracken",43],["Kamri",18],["Lyla",15],["Hansen",13]]},
+ {name:"Parker & Christine",animal:"🐆",herd:"Cheetahs",  color:"#D97A1E", members:[["Parker",41],["Christine",41],["Kaylee",19],["Rachel",17],["Allie",15],["Charlie",12],["Jonathan",11],["Ben",8]]},
+ {name:"E.J. & Lindsey",   animal:"🦩", herd:"Flamingos", color:"#E0668C", members:[["E.J.",34],["Lindsey",34],["Lincoln",5],["Liam",3],["Elsie","9mo"],["Edge","9mo"]]},
+ {name:"Mimi & Grandpa Dane",animal:"🐢",herd:"Tortoises",color:"#3E7350", members:[["Mimi",68],["Grandpa Dane",70]]},
+];
+const SPIRIT=["🦁","🐘","🦒","🦓","🐆","🦏","🦛","🐅","🐊","🦩","🦚","🦜","🦥","🦦","🐒","🦍","🦌","🐫","🦔","🦇","🦉","🦅","🦨","🐗","🐃","🦬","🐻","🦫","🦃","🦡","🦢","🐿️","🦎","🐧","🦆","🐨"];
+let PEOPLE=[];
+FAMILIES.forEach((f,fi)=>f.members.forEach(m=>PEOPLE.push({pid:PEOPLE.length,fam:fi,name:m[0],age:m[1],spirit:SPIRIT[PEOPLE.length%SPIRIT.length],pts:0,roster:[]})));
+
+/* ---------- config ---------- */
+const API="https://statsapi.mlb.com/api";
+const SERIES_START="2026-07-07", SERIES_END="2026-07-09";
+const TEAMS={135:{ab:"SD",cls:"sd",name:"Padres"},109:{ab:"AZ",cls:"az",name:"D-backs"}};
+const DRAFT_SEED=70977; // fixed => identical draft on every device
+
+/* fallback line-ups (preview only; real active rosters load when online) */
+const SAMPLE={135:[
+ {id:-1,name:"Fernando Tatis Jr.",pos:"RF",num:23,hit:1},{id:-2,name:"Manny Machado",pos:"3B",num:13,hit:1},
+ {id:-3,name:"Jackson Merrill",pos:"CF",num:3,hit:1},{id:-4,name:"Xander Bogaerts",pos:"SS",num:2,hit:1},
+ {id:-5,name:"Luis Arraez",pos:"1B",num:4,hit:1},{id:-6,name:"Jake Cronenworth",pos:"2B",num:9,hit:1},
+ {id:-7,name:"Michael King",pos:"SP",num:34,hit:0},{id:-8,name:"Yu Darvish",pos:"SP",num:11,hit:0}],
+ 109:[
+ {id:-11,name:"Corbin Carroll",pos:"LF",num:7,hit:1},{id:-12,name:"Ketel Marte",pos:"2B",num:4,hit:1},
+ {id:-13,name:"Geraldo Perdomo",pos:"SS",num:2,hit:1},{id:-14,name:"Gabriel Moreno",pos:"C",num:14,hit:1},
+ {id:-15,name:"Jake McCarthy",pos:"RF",num:31,hit:1},{id:-16,name:"Lourdes Gurriel Jr.",pos:"LF",num:12,hit:1},
+ {id:-17,name:"Zac Gallen",pos:"SP",num:23,hit:0},{id:-18,name:"Brandon Pfaadt",pos:"SP",num:32,hit:0}]};
+
+/* ---------- state ---------- */
+let ME=null;
+let LIVE={mode:"sim",feed:null,trackedLabel:"",trackedState:""};
+let sim=null, liveT=null, simT=null;
+let STAT={};                 // playerId -> stat line
+let COMPLETED=[];            // normalized completed plays
+let seenCount=0;             // for prediction grading
+let ROSTERS=SAMPLE, rostersLive=false, probables={home:null,away:null};
+let BONUS={predict:0,scav:0,bingo:null,scavMarks:[],pending:null,streak:0,lastResult:null};
+let curView="indiv";
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt=n=>{n=Math.round((n||0)*4)/4;return (n>0?"+":"")+(Number.isInteger(n)?n:(""+n));};
+function mul(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+function shuffle(arr,rng){const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove("on"),2600);}
+function show(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));$("#"+id).classList.add("on");window.scrollTo(0,0);}
+
+/* ---------- tiny local persistence (works on Pages; no-op in sandbox) ---------- */
+function lset(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+function lget(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch(e){return null;}}
+
+/* =================================================================
+   IDENTITY
+================================================================= */
+function renderPicker(){
+  const wrap=$("#famList");wrap.innerHTML="";
+  FAMILIES.forEach((f,fi)=>{
+    const kids=f.members.length;
+    const el=document.createElement("div");el.className="fam";
+    el.innerHTML=`<div class="fam-h">
+        <div class="em">${f.animal}</div>
+        <div><div class="t">${esc(f.name)}</div><div class="s">${f.herd} · ${kids}</div></div>
+        <div class="cnt" style="background:${f.color}">${kids}</div>
+      </div><div class="people"></div>`;
+    const ppl=el.querySelector(".people");
+    PEOPLE.filter(p=>p.fam===fi).forEach(p=>{
+      const c=document.createElement("div");c.className="chip";
+      c.innerHTML=`<span class="cem">${p.spirit}</span>${esc(p.name)}<small>${p.age}</small>`;
+      c.onclick=e=>{e.stopPropagation();chooseMe(p.pid);};
+      ppl.appendChild(c);
+    });
+    el.querySelector(".fam-h").onclick=()=>{document.querySelectorAll(".fam").forEach(x=>{if(x!==el)x.classList.remove("open")});el.classList.toggle("open");};
+    wrap.appendChild(el);
+  });
+}
+let booted=false;
+function defaultBonus(){return {predict:0,scav:0,bingo:null,scavMarks:[],pending:null,streak:0,lastResult:null};}
+function loadBonusFor(pid){BONUS=defaultBonus();const s=lget("safari:bonus:"+pid);if(s)Object.assign(BONUS,s);}
+function chooseMe(pid){
+  ME=PEOPLE[pid];
+  loadBonusFor(pid);
+  location.hash="p="+pid;
+  if(!booted){booted=true;enterApp();}else refreshPerson();
+}
+function switchTo(pid){
+  if(pid==null||!PEOPLE[pid]||(ME&&ME.pid===pid))return;
+  if(ME)saveBonus();            // keep the person you're leaving
+  ME=PEOPLE[pid];
+  loadBonusFor(pid);
+  location.hash="p="+pid;
+  refreshPerson();
+  closeSheet();
+  toast("Now watching "+ME.name);
+}
+function refreshPerson(){buildBingo(false);renderRoster();renderStandings();renderPred();renderSafari();updateViewbar();window.scrollTo(0,0);}
+
+/* --- switcher sheet: one phone covers several people --- */
+function openSheet(){if(!ME)return;renderSheet();$("#sheetBack").classList.add("on");}
+function closeSheet(){$("#sheetBack").classList.remove("on");$("#sheetAll").style.display="none";$("#allToggle").textContent="Show all families";}
+function prow(p){return `<div class="prow ${ME&&ME.pid===p.pid?'cur':''}" data-pid="${p.pid}"><span class="pe">${p.spirit}</span><span class="pn">${esc(p.name)}</span><small>${p.age}</small><b>${fmt(p.pts)}</b></div>`;}
+function renderSheet(){
+  const f=FAMILIES[ME.fam];
+  $("#sheetFam").innerHTML=`<div class="sheet-lbl">${f.animal} Your family · ${esc(f.name)}</div>`+PEOPLE.filter(p=>p.fam===ME.fam).map(prow).join("");
+  $("#sheetAll").innerHTML=FAMILIES.map((ff,fi)=>fi===ME.fam?"":`<div class="sheet-lbl">${ff.animal} ${esc(ff.name)}</div>`+PEOPLE.filter(p=>p.fam===fi).map(prow).join("")).join("");
+  $("#sheetBack").querySelectorAll(".prow").forEach(r=>r.onclick=()=>switchTo(+r.dataset.pid));
+}
+function updateViewbar(){if(!ME)return;$("#vbAv").textContent=ME.spirit;$("#vbAv").style.borderColor=FAMILIES[ME.fam].color;$("#vbName").textContent=ME.name;$("#vbFam").textContent=`${FAMILIES[ME.fam].herd} · ${fmt(ME.pts)} pts`;}
+function parseHash(){const m=(location.hash||"").match(/p=(\d+)/);return m?+m[1]:null;}
+
+/* =================================================================
+   ROSTERS + DETERMINISTIC DRAFT
+================================================================= */
+async function jget(url){const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw new Error(r.status);return r.json();}
+async function loadRosters(){
+  try{
+    const out={};
+    for(const tid of [135,109]){
+      const d=await jget(`${API}/v1/teams/${tid}/roster?rosterType=active`);
+      out[tid]=d.roster.map(p=>({id:p.person.id,name:p.person.fullName,num:+p.jerseyNumber||0,
+        pos:p.position.abbreviation,hit:!["P","SP","RP","TWP"].includes(p.position.abbreviation)?1:0}));
+      if(!out[tid].length)throw new Error("empty");
+    }
+    ROSTERS=out;rostersLive=true;
+  }catch(e){ROSTERS=SAMPLE;rostersLive=false;}
+}
+function buildDraft(){
+  const rng=mul(DRAFT_SEED);
+  const sortId=a=>a.slice().sort((x,y)=>x.id-y.id);
+  const sdHit=shuffle(sortId(ROSTERS[135].filter(p=>p.hit)),rng);
+  const azHit=shuffle(sortId(ROSTERS[109].filter(p=>p.hit)),rng);
+  // pitcher slot = tonight's probable starters when known, else pool arms
+  const sdArm=probables.home||sortId(ROSTERS[135].filter(p=>!p.hit))[0]||sdHit[0];
+  const azArm=probables.away||sortId(ROSTERS[109].filter(p=>!p.hit))[0]||azHit[0];
+  const tag=(p,t)=>({...p,team:t});
+  PEOPLE.forEach((per,i)=>{
+    const a=tag(sdHit[(2*i)%sdHit.length],135);
+    const b=tag(sdHit[(2*i+1)%sdHit.length],135);
+    const c=tag(azHit[i%azHit.length],109);
+    const arm=(i%2)?tag(azArm,109):tag(sdArm,135);
+    // avoid duplicate SD hitter
+    per.roster=[a, (b.id===a.id?tag(sdHit[(2*i+2)%sdHit.length],135):b), c, arm];
+  });
+}
+
+/* =================================================================
+   SCORING
+================================================================= */
+const BAT={single:1,double:2,triple:3,home_run:4,walk:.5,intent_walk:.5,hit_by_pitch:.5,strikeout:-1,strikeout_double_play:-1};
+function scoreFrom(plays){
+  const t={};const E=id=>t[id]||(t[id]={pts:0,h:0,hr:0,rbi:0,r:0,k:0,outs:0,ha:0,bb:0});
+  for(const pl of plays){
+    const ev=pl.ev, b=E(pl.batter), p=E(pl.pitcher), rbi=pl.rbi||0;
+    if(ev in BAT)b.pts+=BAT[ev];
+    if(["single","double","triple","home_run"].includes(ev))b.h++;
+    if(ev==="home_run")b.hr++;
+    if(ev==="walk"||ev==="intent_walk")b.bb++;
+    b.rbi+=rbi;b.pts+=rbi;
+    if(ev==="strikeout"||ev==="strikeout_double_play"){p.k++;p.pts+=1;}
+    else if(ev==="walk"||ev==="intent_walk"||ev==="hit_by_pitch"){p.bb+=(ev==="hit_by_pitch"?0:1);p.pts-=.25;}
+    else if(ev==="home_run"){p.ha++;p.pts-=2;}
+    else if(["single","double","triple"].includes(ev)){p.ha++;p.pts-=.25;}
+    else {p.outs++;p.pts+=.25;}
+    (pl.runners||[]).forEach(rn=>{if(rn.scored&&rn.runner){const r=E(rn.runner);r.r++;r.pts+=1;}});
+  }
+  return t;
+}
+function recompute(){
+  STAT=scoreFrom(COMPLETED);
+  PEOPLE.forEach(p=>p.pts=p.roster.reduce((s,pl)=>s+((STAT[pl.id]||{}).pts||0),0));
+  paintAll();
+}
+function paintAll(){renderRoster();renderBoard();renderTicker();renderPred();renderStandings();updateViewbar();}
+
+/* normalize plays from live feed or sim into one shape */
+function liveCompleted(feed){
+  return (feed.liveData.plays.allPlays||[]).filter(p=>p.about&&p.about.isComplete!==false&&p.result&&p.result.eventType).map(p=>({
+    ev:p.result.eventType,batter:p.matchup.batter.id,pitcher:p.matchup.pitcher.id,rbi:p.result.rbi||0,
+    runners:(p.runners||[]).map(r=>({scored:r.movement&&(r.movement.end==="score"||r.movement.end==="4B"),runner:r.details&&r.details.runner?r.details.runner.id:null})),
+    desc:p.result.description,half:(p.about.halfInning||"")[0]?.toUpperCase()+(p.about.inning||""),hot:p.result.eventType==="home_run"
+  }));
+}
+function currentIds(){
+  if(LIVE.mode==="live"&&LIVE.feed){const c=LIVE.feed.liveData.plays.currentPlay;return c?{batter:c.matchup.batter.id,pitcher:c.matchup.pitcher.id}:{};}
+  if(sim)return{batter:sim.curBat,pitcher:sim.curPit};return{};
+}
+
+/* =================================================================
+   LIVE vs SIM
+================================================================= */
+async function startLive(){clearInterval(liveT);attemptLive();liveT=setInterval(attemptLive,15000);}
+async function attemptLive(){
+  const wasLive=LIVE.mode==="live";
+  try{
+    const sched=await jget(`${API}/v1/schedule?sportId=1&teamId=135&startDate=${SERIES_START}&endDate=${SERIES_END}&hydrate=probablePitcher`);
+    const games=[];
+    (sched.dates||[]).forEach(d=>d.games.forEach(g=>{
+      const ids=[g.teams.home.team.id,g.teams.away.team.id];
+      if(ids.includes(135)&&ids.includes(109))games.push({g,pk:g.gamePk,date:g.gameDate,state:g.status.abstractGameState});
+    }));
+    if(!games.length)throw new Error("no game");
+    const pick=games.find(x=>x.state==="Live")||
+      games.filter(x=>x.state==="Preview").sort((a,b)=>new Date(a.date)-new Date(b.date))[0]||
+      games.slice().sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
+    // probable starters from the picked game (home=SD 135)
+    const gg=pick.g, hp=gg.teams.home.probablePitcher, ap=gg.teams.away.probablePitcher;
+    const homeSD=gg.teams.home.team.id===135;
+    const newProb={home:hp?{id:hp.id,name:hp.fullName,num:0,pos:"SP",hit:0}:null,
+                   away:ap?{id:ap.id,name:ap.fullName,num:0,pos:"SP",hit:0}:null};
+    if(!homeSD){/* if SD is away, swap so .home is SD */ const t=newProb.home;newProb.home=newProb.away;newProb.away=t;}
+    const changed=JSON.stringify(newProb)!==JSON.stringify(probables);
+    if(changed){probables=newProb; if(rostersLive!==null)buildDraft();}
+    LIVE.trackedLabel=fmtGame(pick.date);
+    if(pick.state==="Preview"){LIVE.mode="sim";LIVE.trackedState="Preview";if(!simT)runSim();renderBoard();renderStandings();return;}
+    const feed=await jget(`${API}/v1.1/game/${pick.pk}/feed/live`);
+    LIVE.mode="live";LIVE.feed=feed;LIVE.trackedState=feed.gameData.status.abstractGameState;
+    clearInterval(simT);simT=null;sim=null;
+    const done=liveCompleted(feed);
+    if(!wasLive){seenCount=done.length;BONUS.pending=null;saveBonus();}
+    gradeNew(done); COMPLETED=done; recompute();
+  }catch(e){ if(LIVE.mode!=="live"){ if(!simT)runSim(); } }
+}
+function fmtGame(iso){try{return new Date(iso).toLocaleString("en-US",{weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit",timeZone:"America/Los_Angeles"})+" PT";}catch(e){return "";}}
+
+/* simulator so it's alive before first pitch */
+function runSim(){
+  if(simT)return;
+  const all=PEOPLE.flatMap(p=>p.roster);
+  const uniq=ids=>{const s={};ids.forEach(p=>s[p.id]=p);return Object.values(s);};
+  const sdBats=uniq(all.filter(p=>p.team===135&&p.hit)), azBats=uniq(all.filter(p=>p.team===109&&p.hit));
+  const sdArm=all.find(p=>p.team===135&&!p.hit)||{id:-900,name:"SD Starter"};
+  const azArm=all.find(p=>p.team===109&&!p.hit)||{id:-901,name:"AZ Starter"};
+  sim={inning:1,half:"T",outs:0,runs:{135:0,109:0},bases:[0,0,0],order:{135:0,109:0},curBat:null,curPit:null};
+  COMPLETED=[];seenCount=0;
+  const bump=()=>{if(sim.half==="T"){sim.half="B";}else{sim.half="T";sim.inning++;}sim.outs=0;sim.bases=[0,0,0];};
+  const tick=()=>{
+    const off=sim.half==="T"?109:135, lineup=off===135?sdBats:azBats;
+    if(!lineup.length){bump();return;}
+    const bat=lineup[sim.order[off]++%lineup.length];
+    const pit=off===135?azArm:sdArm;
+    sim.curBat=bat.id;sim.curPit=pit.id;
+    const r=Math.random();let ev,rbi=0,runners=[];
+    if(r<.20)ev="strikeout";else if(r<.48)ev="field_out";else if(r<.62)ev="single";
+    else if(r<.70)ev="walk";else if(r<.80)ev="double";else if(r<.85)ev="home_run";else ev="field_out";
+    const adv=n=>{for(let i=2;i>=0;i--){if(sim.bases[i]){const to=i+n;if(to>=3){sim.runs[off]++;rbi++;runners.push({scored:true,runner:sim.bases[i]});sim.bases[i]=0;}else{sim.bases[to]=sim.bases[i];if(to!==i)sim.bases[i]=0;}}}};
+    if(ev==="single"){adv(1);sim.bases[0]=bat.id;}
+    else if(ev==="double"){adv(2);sim.bases[1]=bat.id;}
+    else if(ev==="home_run"){adv(4);sim.runs[off]++;rbi++;runners.push({scored:true,runner:bat.id});}
+    else if(ev==="walk"){if(sim.bases[0])adv(1);sim.bases[0]=bat.id;}
+    else sim.outs++;
+    const D={strikeout:`${bat.name} strikes out.`,field_out:`${bat.name} is retired.`,single:`${bat.name} lines a single.`,double:`${bat.name} doubles.`,home_run:`${bat.name} — HOME RUN! 💥`,walk:`${bat.name} walks.`};
+    const play={ev,batter:bat.id,pitcher:pit.id,rbi,runners,desc:D[ev]+(rbi?` (${rbi} in)`:""),half:sim.half+sim.inning,hot:ev==="home_run"};
+    COMPLETED.push(play);
+    if(sim.outs>=3)bump();
+    gradeNew(COMPLETED);
+    recompute();
+    if(ev==="home_run"&&ME&&ME.roster.some(p=>p.id===bat.id))toast(`🎉 ${bat.name.split(" ").slice(-1)[0]} homered — that's yours! +4`);
+  };
+  tick();simT=setInterval(tick,5200);
+}
+
+/* =================================================================
+   RENDER — MY TEAM
+================================================================= */
+function renderRoster(){
+  if(!ME)return;
+  $("#teamHi").textContent=ME.name+"'s players";
+  $("#teamKicker").textContent=`${ME.spirit} ${FAMILIES[ME.fam].herd} · pick #${ME.pid+1}`;
+  const cur=currentIds(),wrap=$("#myRoster");wrap.innerHTML="";
+  ME.roster.forEach(p=>{
+    const up=cur.batter===p.id||cur.pitcher===p.id, st=STAT[p.id]||{};
+    const el=document.createElement("div");el.className="pc"+(up?" up":"");
+    el.innerHTML=`<div class="pc-head">
+        <div class="face ${TEAMS[p.team].cls}"><span class="fnum">${p.num||"–"}</span>${p.id>0?`<img src="https://midfield.mlbstatic.com/v1/people/${p.id}/spots/120" alt="${esc(p.name)}" loading="lazy" onerror="this.remove()">`:""}</div>
+        <div style="min-width:0"><div class="pc-name">${esc(p.name)}${up?`<span class="upflag">${cur.batter===p.id?"AT BAT":"PITCHING"}</span>`:""}</div>
+        <div class="pc-meta">${TEAMS[p.team].name} · ${p.pos}${!p.hit?" (P)":""}</div></div>
+        <div class="pc-pts"><b>${fmt(st.pts||0)}</b><span>pts</span></div></div>
+      <div class="pc-body"><div class="bio">Tap-load background…</div><div class="statgrid">${cells(p,st)}</div></div>`;
+    el.querySelector(".pc-head").onclick=async()=>{el.classList.toggle("open");
+      if(el.classList.contains("open")&&!p._bio){p._bio=await bio(p);el.querySelector(".bio").innerHTML=esc(p._bio);}
+      else if(p._bio)el.querySelector(".bio").innerHTML=esc(p._bio);};
+    wrap.appendChild(el);
+  });
+}
+function cells(p,st){return p.hit?
+  `<div class="stat"><b>${st.h||0}</b><span>Hits</span></div><div class="stat"><b>${st.hr||0}</b><span>HR</span></div><div class="stat"><b>${st.rbi||0}</b><span>RBI</span></div><div class="stat"><b>${st.r||0}</b><span>Runs</span></div>`:
+  `<div class="stat"><b>${st.k||0}</b><span>K</span></div><div class="stat"><b>${st.outs||0}</b><span>Outs</span></div><div class="stat"><b>${st.ha||0}</b><span>Hits</span></div><div class="stat"><b>${st.bb||0}</b><span>BB</span></div>`;}
+async function bio(p){
+  if(p.id<0)return `${p.name} — ${TEAMS[p.team].name} ${p.pos}. Full background loads live on game day.`;
+  try{const d=await jget(`${API}/v1/people/${p.id}`),x=d.people[0],b=[];
+    if(x.primaryPosition)b.push(x.primaryPosition.name);
+    if(x.batSide&&x.pitchHand)b.push(`Bats ${x.batSide.code}/Throws ${x.pitchHand.code}`);
+    if(x.height&&x.weight)b.push(`${x.height}, ${x.weight} lb`);if(x.currentAge)b.push(`age ${x.currentAge}`);
+    let s=`${x.fullName} — ${b.join(" · ")}.`;
+    if(x.birthCity)s+=` Born in ${x.birthCity}${x.birthStateProvince?", "+x.birthStateProvince:(x.birthCountry?", "+x.birthCountry:"")}.`;
+    if(x.mlbDebutDate)s+=` MLB debut ${x.mlbDebutDate.slice(0,4)}.`;return s;
+  }catch(e){return `${p.name} — ${TEAMS[p.team].name} ${p.pos}.`;}
+}
+
+/* =================================================================
+   RENDER — SCOREBOARD + TICKER
+================================================================= */
+function renderBoard(){
+  const f=LIVE.mode==="live"&&LIVE.feed?LIVE.feed:null;
+  let away,home,inn,state,outs,balls,strikes,bases;
+  if(f){const ls=f.liveData.linescore;away=ls.teams.away.runs||0;home=ls.teams.home.runs||0;
+    inn=ls.currentInning||0;state=ls.inningState||"";outs=ls.outs||0;balls=ls.balls||0;strikes=ls.strikes||0;
+    bases=[!!(ls.offense&&ls.offense.first),!!(ls.offense&&ls.offense.second),!!(ls.offense&&ls.offense.third)];}
+  else if(sim){away=sim.runs[109];home=sim.runs[135];inn=sim.inning;state=sim.half==="T"?"Top":"Bot";
+    outs=sim.outs;balls=0;strikes=0;bases=[!!sim.bases[0],!!sim.bases[1],!!sim.bases[2]];}
+  else{away=home=0;inn=1;state="Top";outs=balls=strikes=0;bases=[0,0,0];}
+  const dot=(n,f)=>Array.from({length:n},(_,i)=>`<span class="dot ${i<f?'f':''}"></span>`).join("");
+  $("#boardEl").innerHTML=`<div class="teams">
+      <div class="team"><div class="logo az">AZ</div><div class="nm">D-backs</div></div>
+      <div class="runs">${away}</div>
+      <div class="mid"><div class="inn">${state?state.slice(0,3).toUpperCase()+" "+inn:"—"}</div>
+        <div class="diamond"><div class="base b2 ${bases[1]?'on':''}"></div><div class="base b1 ${bases[0]?'on':''}"></div><div class="base b3 ${bases[2]?'on':''}"></div><div class="base hp"></div></div></div>
+      <div class="runs">${home}</div>
+      <div class="team" style="justify-content:flex-end"><div class="nm">Padres</div><div class="logo sd">SD</div></div></div>
+    <div class="countbar"><div class="cb">${balls}-${strikes}<br>Count</div><div class="cb">Outs <span class="dots">${dot(3,outs)}</span></div></div>`;
+  const b=$("#statusBanner");
+  if(LIVE.mode==="live"){const fin=LIVE.trackedState==="Final";
+    b.innerHTML=`<div class="banner live"><span class="live-dot"${fin?' style="animation:none;background:#8a7f66"':''}></span> ${fin?"Final":"Live"} — ${LIVE.trackedLabel||"Petco Park"} · real MLB data</div>`;}
+  else b.innerHTML=`<div class="banner sim">⚾ Preview mode — practice run. Tracking ${LIVE.trackedLabel||"Thu Jul 9, 6:40pm PT"}; flips to live stats at first pitch.</div>`;
+}
+function renderTicker(){
+  const plays=COMPLETED.slice(-9).reverse();
+  const el=$("#tickerEl");
+  el.innerHTML=plays.length?plays.map(p=>`<div class="tick ${p.hot?'hot':''}"><div class="t">${esc(p.half||"")}</div><div class="d">${esc(p.desc)}</div></div>`).join("")
+    :`<div class="tick"><div class="d muted">Waiting for first pitch…</div></div>`;
+}
+
+/* =================================================================
+   PREDICTIONS
+================================================================= */
+const CAT={single:"hit",double:"hit",triple:"hit",home_run:"hr",walk:"walk",intent_walk:"walk",hit_by_pitch:"walk",strikeout:"k",strikeout_double_play:"k"};
+function catOf(ev){return CAT[ev]||"out";}
+function gradeNew(plays){
+  if(plays.length>seenCount){
+    const fresh=plays.slice(seenCount);seenCount=plays.length;
+    if(BONUS.pending){
+      const outcome=catOf(fresh[0].ev), choice=BONUS.pending;
+      let win=false,add=0;
+      if(choice===outcome){win=true;add=(outcome==="hr"?10:3);}
+      else if(choice==="hit"&&outcome==="hr"){win=true;add=3;}
+      if(win){BONUS.predict+=add;BONUS.streak++;if(BONUS.streak>=3){add+=2;BONUS.predict+=2;}BONUS.lastResult=`✅ ${labelCat(outcome)} — +${add}${BONUS.streak>=3?" (streak!)":""}`;toast(`✅ Nailed it! +${add}`);}
+      else{BONUS.streak=0;BONUS.lastResult=`❌ It was a ${labelCat(outcome)}. Next one!`;}
+      BONUS.pending=null;saveBonus();
+    }
+  }
+}
+function labelCat(c){return {hit:"hit",hr:"home run",walk:"walk",k:"strikeout",out:"out"}[c]||c;}
+function renderPred(){
+  const box=$("#predBox");const cur=currentIds();
+  if(!cur.batter){box.innerHTML="";return;}
+  const batter=nameById(cur.batter)||"the batter";
+  const opts=[["hit","HIT"],["out","OUT"],["k","STRIKEOUT"],["walk","WALK"],["hr","HOMER"]];
+  box.innerHTML=`<div class="pred">
+    <div style="display:flex;align-items:center;gap:11px">
+      <div class="predface"><span>${esc((batter[0]||"?"))}</span>${cur.batter>0?`<img src="https://midfield.mlbstatic.com/v1/people/${cur.batter}/spots/120" alt="" onerror="this.remove()">`:""}</div>
+      <div><div class="q">Call this at-bat</div><div class="who">${esc(batter)} up · +3 · homer +10</div></div>
+    </div>
+    <div class="predbtns">${opts.map(o=>`<button data-c="${o[0]}" class="${BONUS.pending===o[0]?'sel':''}">${o[1]}</button>`).join("")}</div>
+    <div class="predresult">${BONUS.pending?"Locked in — watch it play out ⚾":(BONUS.lastResult||"Tap your call before the pitch.")}</div></div>`;
+  box.querySelectorAll("button").forEach(b=>b.onclick=()=>{BONUS.pending=b.dataset.c;saveBonus();renderPred();});
+}
+function nameById(id){for(const p of PEOPLE)for(const pl of p.roster)if(pl.id===id)return pl.name;
+  if(LIVE.feed){const pp=LIVE.feed.gameData.players;for(const k in pp)if(pp[k].id===id)return pp[k].fullName;}return null;}
+
+/* =================================================================
+   STANDINGS
+================================================================= */
+function renderStandings(){
+  const el=$("#lbEl");
+  if(curView==="indiv"){
+    const rows=PEOPLE.slice().sort((a,b)=>b.pts-a.pts);
+    el.innerHTML=rows.map((p,i)=>`<div class="lb ${ME&&p.pid===ME.pid?'me':''}">
+      <div class="rank ${i===0?'g1':''}">${i+1}</div>
+      <div class="av" style="border-color:${FAMILIES[p.fam].color}">${p.spirit}</div>
+      <div><div class="who">${esc(p.name)}</div><div class="sub">${FAMILIES[p.fam].animal} ${FAMILIES[p.fam].herd}${topPlayer(p)}</div></div>
+      <div class="score">${fmt(p.pts)}</div></div>`).join("");
+  }else{
+    const fam=FAMILIES.map((f,fi)=>{const mem=PEOPLE.filter(p=>p.fam===fi);const avg=mem.reduce((s,p)=>s+p.pts,0)/mem.length;
+      const top=mem.slice().sort((a,b)=>b.pts-a.pts)[0];return {fi,f,avg,top,n:mem.length};}).sort((a,b)=>b.avg-a.avg);
+    el.innerHTML=fam.map((r,i)=>`<div class="lb ${ME&&ME.fam===r.fi?'mine':''}">
+      <div class="rank ${i===0?'g1':''}">${i+1}</div>
+      <div class="av" style="border-color:${r.f.color};font-size:20px">${r.f.animal}</div>
+      <div><div class="who">${esc(r.f.name)}</div><div class="sub">${r.f.herd} · avg of ${r.n} · ⭐ ${esc(r.top.name)} ${fmt(r.top.pts)}</div></div>
+      <div class="score">${fmt(Math.round(r.avg*4)/4)}</div></div>`).join("");
+  }
+}
+function topPlayer(p){const best=p.roster.map(pl=>({n:pl.name,pts:(STAT[pl.id]||{}).pts||0})).sort((a,b)=>b.pts-a.pts)[0];
+  return best&&best.pts?` · ⭐ ${esc(best.n.split(" ").slice(-1)[0])} ${fmt(best.pts)}`:"";}
+
+/* =================================================================
+   BINGO
+================================================================= */
+const BINGO=["Home run (either team)","Foul ball near us","Pitching change","Strikeout looking","Stolen base","Double play",
+"Kiss cam","The Wave","Dot race on screen","Someone gets nachos","Safari mascot 🦁","Animal-print outfit","Ump argues a call",
+"Diving catch","Full count","Beach ball on field","Homer + a roar","3-run inning","Someone naps 😴","Rally started",
+"Padres take the lead","YOUR player gets a hit","7th-inning stretch","Zoo giveaway spotted","Grand slam 🌟","Vendor walks by"];
+function buildBingo(fresh){
+  if(!BONUS.bingo||fresh){
+    const rng=Math.random;const items=BINGO.slice().sort(()=>rng()-.5).slice(0,24);items.splice(12,0,"FREE");
+    BONUS.bingo={items,marks:Array(25).fill(false)};BONUS.bingo.marks[12]=true;saveBonus();
+  }
+  paintBingo();
+}
+function paintBingo(){
+  const el=$("#bingoEl");el.innerHTML="";const c=BONUS.bingo;
+  c.items.forEach((t,i)=>{const b=document.createElement("div");
+    b.className="bx"+(t==="FREE"?" free":"")+(c.marks[i]?" hit":"");b.textContent=t==="FREE"?"FREE":t;
+    b.onclick=()=>{if(t==="FREE")return;c.marks[i]=!c.marks[i];saveBonus();paintBingo();if(bingoWin(c.marks))toast("🎉 BINGO! Shout it out!");};
+    el.appendChild(b);});
+}
+function bingoWin(m){const L=[];for(let r=0;r<5;r++)L.push([0,1,2,3,4].map(c=>r*5+c));for(let c=0;c<5;c++)L.push([0,1,2,3,4].map(r=>r*5+c));
+  L.push([0,6,12,18,24]);L.push([4,8,12,16,20]);return L.some(l=>l.every(i=>m[i]));}
+
+/* =================================================================
+   SAFARI (spirit animal + scavenger)
+================================================================= */
+const SCAV=[["🦁","Safari mascot or costume"],["🐆","Someone in animal print"],["🎁","Zoo Safari Park giveaway"],["🥜","Peanuts or Cracker Jack"],
+["🦩","Pink outfit in the crowd"],["📣","Lead a cheer"],["🐘","Animal on the videoboard"],["🌭","Ballpark dog or nachos"],
+["🧢","5+ Padres caps near you"],["📸","Take a group selfie"],["🦒","Spot the tallest fan"],["⚾","Get a foul ball or freebie"]];
+function renderSafari(){
+  if(!ME)return;
+  $("#safariHi").textContent=ME.name+"'s safari";
+  const bonus=BONUS.predict+BONUS.scav;
+  $("#youCard").innerHTML=`<div style="font-size:52px">${ME.spirit}</div>
+    <div style="font:700 20px/1 'Oswald';margin-top:6px">${esc(ME.name)}</div>
+    <div class="muted" style="margin-top:4px">${FAMILIES[ME.fam].animal} ${esc(FAMILIES[ME.fam].name)} · the ${FAMILIES[ME.fam].herd}</div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:14px">
+      <div><div class="bignum">${fmt(ME.pts).replace('+','')}</div><div class="muted">team score</div></div>
+      <div style="width:1px;background:var(--line)"></div>
+      <div><div class="bignum" style="color:var(--savanna)">${bonus}</div><div class="muted">safari bonus</div></div>
+    </div>`;
+  if(!BONUS.scavMarks.length)BONUS.scavMarks=Array(SCAV.length).fill(false);
+  const el=$("#scavEl");el.innerHTML="";
+  SCAV.forEach((s,i)=>{const d=document.createElement("div");d.className="sv"+(BONUS.scavMarks[i]?" got":"");
+    d.innerHTML=`<span class="e">${s[0]}</span><span class="x">${esc(s[1])}</span>`;
+    d.onclick=()=>{BONUS.scavMarks[i]=!BONUS.scavMarks[i];BONUS.scav=BONUS.scavMarks.filter(Boolean).length*2;saveBonus();renderSafari();
+      if(BONUS.scavMarks.every(Boolean))toast("🏆 Full safari — all 12 caught!");};
+    el.appendChild(d);});
+}
+function saveBonus(){if(ME)lset("safari:bonus:"+ME.pid,BONUS);}
+
+/* =================================================================
+   BOOT
+================================================================= */
+async function enterApp(){
+  show("app");
+  await loadRosters();
+  buildDraft();
+  buildBingo(false);
+  renderRoster();renderBoard();renderTicker();renderStandings();renderPred();renderSafari();updateViewbar();
+  startLive();
+}
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));t.classList.add("on");
+  document.querySelectorAll(".tabpane").forEach(p=>p.classList.toggle("on",p.dataset.pane===t.dataset.tab));
+  window.scrollTo(0,0);
+});
+document.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".seg button").forEach(x=>x.classList.remove("on"));b.classList.add("on");
+  curView=b.dataset.view;renderStandings();});
+$("#newBingo").onclick=()=>buildBingo(true);
+$("#allToggle").onclick=()=>{const el=$("#sheetAll"),open=el.style.display!=="none";el.style.display=open?"none":"block";$("#allToggle").textContent=open?"Show all families":"Hide other families";};
+
+renderPicker();
+(function(){const pid=parseHash();if(pid!=null&&PEOPLE[pid]){chooseMe(pid);}})();
+window.addEventListener("hashchange",()=>{const pid=parseHash();if(pid!=null&&PEOPLE[pid]&&(!ME||ME.pid!==pid)){booted?switchTo(pid):chooseMe(pid);}});
+</script>
