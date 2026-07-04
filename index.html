@@ -122,8 +122,14 @@
   .pc-pts span{display:block;font:600 9px/1 "JetBrains Mono";letter-spacing:1px;color:var(--ink-soft);text-transform:uppercase;margin-top:3px}
   .upflag{display:inline-block;background:var(--gold);color:#3a2317;font:700 9px/1 "JetBrains Mono";letter-spacing:1px;padding:4px 6px;border-radius:6px;margin-left:6px;vertical-align:middle}
   .pc-body{border-top:1px dashed var(--line);padding:0 12px;max-height:0;overflow:hidden;transition:max-height .3s,padding .3s}
-  .pc.open .pc-body{max-height:360px;padding:12px}
+  .pc.open .pc-body{max-height:900px;padding:12px}
   .bio{font-size:13.5px;line-height:1.5}
+  .bio-lead{margin:0;font-size:13.5px;line-height:1.5}
+  .ff{margin-top:10px;background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:9px 11px}
+  .ff-t{display:block;font:700 9.5px/1 "JetBrains Mono",monospace;letter-spacing:1.2px;text-transform:uppercase;color:var(--savanna);margin-bottom:7px}
+  .ff-list{margin:0;padding:0;list-style:none}
+  .ff-list li{position:relative;padding-left:15px;font-size:12.5px;line-height:1.5;margin:5px 0}
+  .ff-list li:before{content:"›";position:absolute;left:2px;top:-1px;color:var(--gold-2);font:700 14px/1 "Oswald"}
   .statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
   .stat{background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:7px 4px;text-align:center}
   .stat b{display:block;font:700 16px/1 "JetBrains Mono";color:var(--friar)}
@@ -179,6 +185,18 @@
   .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--friar);color:#fff;padding:12px 18px;border-radius:12px;
     font:700 14px/1.3 "Oswald";box-shadow:var(--shadow);z-index:40;border:2px solid var(--gold);max-width:90%;text-align:center;opacity:0;transition:opacity .25s;pointer-events:none}
   .toast.on{opacity:1}
+  /* family "called it" flash */
+  .callflash{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:45;min-width:250px;max-width:92%;
+    text-align:center;border-radius:14px;padding:12px 18px;background:linear-gradient(180deg,var(--field),#2f5d40);color:#fff;
+    border:2px solid var(--gold);font:600 13.5px/1.35 "Libre Franklin";box-shadow:0 8px 26px rgba(0,0,0,.35);opacity:0;
+    pointer-events:none;transition:opacity .25s}
+  .callflash.on{opacity:1;animation:callpulse .8s ease-in-out infinite}
+  .callflash b{font-family:"Oswald";font-weight:700;letter-spacing:.3px}
+  .callflash .cf-em{font-size:18px;vertical-align:-2px}
+  .callflash .cf-pts{display:inline-block;background:var(--gold);color:#3a2317;font:700 12px/1 "JetBrains Mono",monospace;
+    padding:3px 7px;border-radius:20px;margin-left:3px}
+  @keyframes callpulse{0%,100%{box-shadow:0 0 0 0 rgba(240,180,41,.6),0 8px 26px rgba(0,0,0,.35)}
+    50%{box-shadow:0 0 0 12px rgba(240,180,41,0),0 8px 26px rgba(0,0,0,.35)}}
   .bignum{font:700 40px/1 "JetBrains Mono";color:var(--friar)}
   /* person switcher */
   .viewbar{position:sticky;top:0;z-index:15;display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#2c1a10,var(--friar));
@@ -251,7 +269,7 @@
     <div class="tabpane" data-pane="ranks">
       <div class="mast" style="padding:12px 14px">
         <div class="kicker">Live standings</div><h1 style="font-size:23px">The Leaderboard</h1>
-        <div class="sub">Same on every phone — it's all from the live game.</div>
+        <div class="sub">Live fantasy scores from the game, plus the at-bats your family calls right.</div>
       </div>
       <div class="seg"><button data-view="indiv" class="on">Individuals</button><button data-view="fam">Family herds</button></div>
       <div class="card" style="padding:0;margin-top:12px" id="lbEl"></div>
@@ -276,7 +294,7 @@
       <p class="muted" style="margin:6px 2px 0">Catch each one around the park tonight. +2 apiece — collect all twelve.</p>
       <div class="scav" id="scavEl"></div>
       <div class="card tight" style="margin-top:14px"><label class="fld">Good to know</label><p class="muted" style="margin:0">
-        The <b>leaderboard</b> is your live fantasy score — identical on everyone's phone. <b>Bingo, predictions, and the safari hunt</b> are your own bonus points, tracked just on your device. Have fun out there. 🦁⚾</p></div>
+        The <b>leaderboard</b> blends your live fantasy score with the <b>at-bat calls</b> your family nails on the Live tab — a hot streak of predictions can move you up the ranks. <b>Bingo and the safari hunt</b> stay as personal bonus points on this device. Have fun out there. 🦁⚾</p></div>
     </div>
 
     <div class="tabs">
@@ -289,6 +307,7 @@
   </section>
 </div>
 <div class="toast" id="toast"></div>
+<div class="callflash" id="callFlash"></div>
 <div class="sheet-back" id="sheetBack" onclick="if(event.target===this)closeSheet()">
   <div class="sheet">
     <div class="sheet-h">Who are you watching?</div>
@@ -353,9 +372,20 @@ let curView="indiv";
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmt=n=>{n=Math.round((n||0)*4)/4;return (n>0?"+":"")+(Number.isInteger(n)?n:(""+n));};
+/* leaderboard score = live fantasy (roster) + this person's correct at-bat calls */
+function total(p){return (p.pts||0)+(p.callPts||0);}
+const openCards=new Set();   // player ids whose roster card is expanded (survives re-renders)
 function mul(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
 function shuffle(arr,rng){const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove("on"),2600);}
+/* flashing bottom banner celebrating a family member's correct at-bat call */
+function flashCall(person,pts,streak){
+  if(!person)return;
+  const f=FAMILIES[person.fam],el=$("#callFlash");
+  el.innerHTML=`<span class="cf-em">${f.animal}</span> <b>${esc(person.name)}</b> of the ${esc(f.herd)} called it right! <span class="cf-pts">+${pts}</span>${streak?" 🔥":""}`;
+  el.classList.add("on");
+  clearTimeout(el._x);el._x=setTimeout(()=>el.classList.remove("on"),5200);
+}
 function show(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));$("#"+id).classList.add("on");window.scrollTo(0,0);}
 
 /* ---------- tiny local persistence (works on Pages; no-op in sandbox) ---------- */
@@ -388,7 +418,10 @@ function renderPicker(){
 }
 let booted=false;
 function defaultBonus(){return {predict:0,scav:0,bingo:null,scavMarks:[],pending:null,streak:0,lastResult:null};}
-function loadBonusFor(pid){BONUS=defaultBonus();const s=lget("safari:bonus:"+pid);if(s)Object.assign(BONUS,s);}
+function loadBonusFor(pid){BONUS=defaultBonus();const s=lget("safari:bonus:"+pid);if(s)Object.assign(BONUS,s);if(PEOPLE[pid])PEOPLE[pid].callPts=BONUS.predict||0;}
+/* pull every person's saved correct-call points off this device so the leaderboard reflects everyone tracked here */
+function callPtsFor(pid){const s=lget("safari:bonus:"+pid);return s&&s.predict?s.predict:0;}
+function loadAllCallPts(){PEOPLE.forEach(p=>p.callPts=callPtsFor(p.pid));}
 function chooseMe(pid){
   ME=PEOPLE[pid];
   loadBonusFor(pid);
@@ -405,19 +438,19 @@ function switchTo(pid){
   closeSheet();
   toast("Now watching "+ME.name);
 }
-function refreshPerson(){buildBingo(false);renderRoster();renderStandings();renderPred();renderSafari();updateViewbar();window.scrollTo(0,0);}
+function refreshPerson(){openCards.clear();buildBingo(false);renderRoster();renderStandings();renderPred();renderSafari();updateViewbar();window.scrollTo(0,0);}
 
 /* --- switcher sheet: one phone covers several people --- */
 function openSheet(){if(!ME)return;renderSheet();$("#sheetBack").classList.add("on");}
 function closeSheet(){$("#sheetBack").classList.remove("on");$("#sheetAll").style.display="none";$("#allToggle").textContent="Show all families";}
-function prow(p){return `<div class="prow ${ME&&ME.pid===p.pid?'cur':''}" data-pid="${p.pid}"><span class="pe">${p.spirit}</span><span class="pn">${esc(p.name)}</span><small>${p.age}</small><b>${fmt(p.pts)}</b></div>`;}
+function prow(p){return `<div class="prow ${ME&&ME.pid===p.pid?'cur':''}" data-pid="${p.pid}"><span class="pe">${p.spirit}</span><span class="pn">${esc(p.name)}</span><small>${p.age}</small><b>${fmt(total(p))}</b></div>`;}
 function renderSheet(){
   const f=FAMILIES[ME.fam];
   $("#sheetFam").innerHTML=`<div class="sheet-lbl">${f.animal} Your family · ${esc(f.name)}</div>`+PEOPLE.filter(p=>p.fam===ME.fam).map(prow).join("");
   $("#sheetAll").innerHTML=FAMILIES.map((ff,fi)=>fi===ME.fam?"":`<div class="sheet-lbl">${ff.animal} ${esc(ff.name)}</div>`+PEOPLE.filter(p=>p.fam===fi).map(prow).join("")).join("");
   $("#sheetBack").querySelectorAll(".prow").forEach(r=>r.onclick=()=>switchTo(+r.dataset.pid));
 }
-function updateViewbar(){if(!ME)return;$("#vbAv").textContent=ME.spirit;$("#vbAv").style.borderColor=FAMILIES[ME.fam].color;$("#vbName").textContent=ME.name;$("#vbFam").textContent=`${FAMILIES[ME.fam].herd} · ${fmt(ME.pts)} pts`;}
+function updateViewbar(){if(!ME)return;$("#vbAv").textContent=ME.spirit;$("#vbAv").style.borderColor=FAMILIES[ME.fam].color;$("#vbName").textContent=ME.name;$("#vbFam").textContent=`${FAMILIES[ME.fam].herd} · ${fmt(total(ME))} pts`;}
 function parseHash(){const m=(location.hash||"").match(/p=(\d+)/);return m?+m[1]:null;}
 
 /* =================================================================
@@ -581,32 +614,86 @@ function renderRoster(){
   const cur=currentIds(),wrap=$("#myRoster");wrap.innerHTML="";
   ME.roster.forEach(p=>{
     const up=cur.batter===p.id||cur.pitcher===p.id, st=STAT[p.id]||{};
-    const el=document.createElement("div");el.className="pc"+(up?" up":"");
+    const isOpen=openCards.has(p.id);
+    const el=document.createElement("div");el.className="pc"+(up?" up":"")+(isOpen?" open":"");el.dataset.pid=p.id;
     el.innerHTML=`<div class="pc-head">
         <div class="face ${TEAMS[p.team].cls}"><span class="fnum">${p.num||"–"}</span>${p.id>0?`<img src="https://midfield.mlbstatic.com/v1/people/${p.id}/spots/120" alt="${esc(p.name)}" loading="lazy" onerror="this.remove()">`:""}</div>
         <div style="min-width:0"><div class="pc-name">${esc(p.name)}${up?`<span class="upflag">${cur.batter===p.id?"AT BAT":"PITCHING"}</span>`:""}</div>
         <div class="pc-meta">${TEAMS[p.team].name} · ${p.pos}${!p.hit?" (P)":""}</div></div>
         <div class="pc-pts"><b>${fmt(st.pts||0)}</b><span>pts</span></div></div>
-      <div class="pc-body"><div class="bio">Tap-load background…</div><div class="statgrid">${cells(p,st)}</div></div>`;
-    el.querySelector(".pc-head").onclick=async()=>{el.classList.toggle("open");
-      if(el.classList.contains("open")&&!p._bio){p._bio=await bio(p);el.querySelector(".bio").innerHTML=esc(p._bio);}
-      else if(p._bio)el.querySelector(".bio").innerHTML=esc(p._bio);};
+      <div class="pc-body"><div class="bio">${isOpen&&p._bio?p._bio:"Tap for the backstory &amp; fun facts…"}</div><div class="statgrid">${cells(p,st)}</div></div>`;
+    el.querySelector(".pc-head").onclick=()=>{
+      const nowOpen=el.classList.toggle("open");
+      if(nowOpen){openCards.add(p.id);fillBio(p);}
+      else openCards.delete(p.id);
+    };
+    if(isOpen&&!p._bio)fillBio(p);   // stayed open through a live/sim re-render — make sure the bio is loaded
     wrap.appendChild(el);
   });
+}
+/* load a player's rich bio+facts once, cache on the player, and drop it into the live card (found by id, so a
+   background re-render swapping out the DOM node can't strand the result) */
+async function fillBio(p){
+  const set=html=>{const b=document.querySelector(`#myRoster [data-pid="${p.id}"] .bio`);if(b)b.innerHTML=html;};
+  if(p._bio){set(p._bio);return;}
+  if(p._bioLoading)return;            // a fetch is already in flight; it will cache & fill on its own
+  p._bioLoading=true;
+  try{p._bio=await bio(p);}finally{p._bioLoading=false;}
+  set(p._bio);
 }
 function cells(p,st){return p.hit?
   `<div class="stat"><b>${st.h||0}</b><span>Hits</span></div><div class="stat"><b>${st.hr||0}</b><span>HR</span></div><div class="stat"><b>${st.rbi||0}</b><span>RBI</span></div><div class="stat"><b>${st.r||0}</b><span>Runs</span></div>`:
   `<div class="stat"><b>${st.k||0}</b><span>K</span></div><div class="stat"><b>${st.outs||0}</b><span>Outs</span></div><div class="stat"><b>${st.ha||0}</b><span>Hits</span></div><div class="stat"><b>${st.bb||0}</b><span>BB</span></div>`;}
+/* hand-written, family-friendly fun facts for the marquee names (keyed by lowercase full name).
+   Falls back to facts pulled from the live MLB people API for anyone not listed here. */
+const FACTS={
+ "fernando tatis jr.":["Nicknamed “El Niño,” he’s a Gold Glove right fielder who actually broke into the majors as a shortstop.","His dad, Fernando Sr., is the only player in MLB history to hit two grand slams in the same inning.","Signed a 14-year contract with the Padres — one of the longest deals in baseball history."],
+ "manny machado":["An 11-time All-Star nicknamed “El Ministro de la Defensa” — the Minister of Defense — for his wizardry at third base.","A Miami kid who was a first-round draft pick straight out of high school.","Signed an 11-year, $350M deal to stay a Padre for the long haul."],
+ "jackson merrill":["Was drafted as a shortstop, then taught himself center field as a rookie — and made the All-Star team doing it.","A Maryland native known in the clubhouse for an unshakeable, laid-back calm at the plate."],
+ "xander bogaerts":["Grew up on the tiny island of Aruba and has a twin brother, Jair, who also played pro ball.","Won a World Series with the Red Sox as a 21-year-old rookie back in 2013.","Speaks four languages — Dutch, Papiamento, English, and Spanish."],
+ "luis arraez":["A batting-title machine — he’s won it in both the American and National Leagues.","One of the hardest hitters in baseball to strike out; he just sprays line drives all over the field.","A Venezuela native who models his contact-first game after the old-school greats."],
+ "jake cronenworth":["Was a two-way star at the University of Michigan — he both pitched and played shortstop.","Married into baseball royalty: his brother-in-law is fellow big-leaguer Didi Gregorius."],
+ "michael king":["A Boston College product who reinvented himself from a bullpen arm into a front-line starting pitcher.","Came to San Diego as the centerpiece of the blockbuster Juan Soto trade."],
+ "yu darvish":["Born in Japan, he throws one of the deepest pitch mixes in all of baseball — as many as eight or nine different pitches.","A superstar in Japan before he crossed over to become a perennial MLB All-Star."],
+ "corbin carroll":["The 2023 NL Rookie of the Year and one of the very fastest players in the game.","A Seattle native who signed an eight-year deal with Arizona before he’d even finished his rookie season."],
+ "ketel marte":["A switch-hitter from the Dominican Republic who was named MVP of the 2023 NL Championship Series.","A multi-time All-Star and the steady heartbeat of the D-backs’ lineup."],
+ "geraldo perdomo":["A slick-fielding shortstop from the Dominican Republic with a patient, on-base bat.","Made an All-Star team as one of the youngest everyday shortstops in the league."],
+ "gabriel moreno":["A Gold Glove catcher from Venezuela with one of the best throwing arms behind the plate.","Came to Arizona in the trade that sent Daulton Varsho to Toronto."],
+ "jake mccarthy":["A speedy outfielder from Scranton, Pennsylvania, and a constant stolen-base threat.","Played college ball at Virginia; his brother Joe was also a pro ballplayer."],
+ "lourdes gurriel jr.":["Comes from a legendary Cuban baseball family — his dad and his brother Yuli were both stars.","An All-Star outfielder known for big swings and an even bigger personality."],
+ "zac gallen":["One of the most cerebral aces in baseball; he pitched at the University of North Carolina.","A New Jersey native who has finished near the top of Cy Young voting."],
+ "brandon pfaadt":["A power-armed young starter out of tiny Bellarmine University in Kentucky.","Broke out during Arizona’s 2023 playoff run as a rookie."],
+};
+function funHTML(items){return items&&items.length?`<div class="ff"><span class="ff-t">🦁 Fun facts</span><ul class="ff-list">${items.map(t=>`<li>${t}</li>`).join("")}</ul></div>`:"";}
 async function bio(p){
-  if(p.id<0)return `${p.name} — ${TEAMS[p.team].name} ${p.pos}. Full background loads live on game day.`;
-  try{const d=await jget(`${API}/v1/people/${p.id}`),x=d.people[0],b=[];
-    if(x.primaryPosition)b.push(x.primaryPosition.name);
-    if(x.batSide&&x.pitchHand)b.push(`Bats ${x.batSide.code}/Throws ${x.pitchHand.code}`);
-    if(x.height&&x.weight)b.push(`${x.height}, ${x.weight} lb`);if(x.currentAge)b.push(`age ${x.currentAge}`);
-    let s=`${x.fullName} — ${b.join(" · ")}.`;
-    if(x.birthCity)s+=` Born in ${x.birthCity}${x.birthStateProvince?", "+x.birthStateProvince:(x.birthCountry?", "+x.birthCountry:"")}.`;
-    if(x.mlbDebutDate)s+=` MLB debut ${x.mlbDebutDate.slice(0,4)}.`;return s;
-  }catch(e){return `${p.name} — ${TEAMS[p.team].name} ${p.pos}.`;}
+  const lead=t=>`<p class="bio-lead">${t}</p>`;
+  const curated=FACTS[(p.name||"").toLowerCase()];
+  if(p.id<0){
+    let html=lead(`<b>${esc(p.name)}</b> — ${esc(TEAMS[p.team].name)} ${esc(p.pos)}${p.hit?"":", pitcher"}.`);
+    return html+(curated?funHTML(curated):lead("More on the full background loads live on game day."));
+  }
+  try{
+    const d=await jget(`${API}/v1/people/${p.id}`),x=d.people[0],b=[];
+    if(x.primaryPosition)b.push(esc(x.primaryPosition.name));
+    if(x.batSide&&x.pitchHand)b.push(`Bats ${esc(x.batSide.code)} / Throws ${esc(x.pitchHand.code)}`);
+    if(x.height&&x.weight)b.push(`${esc(x.height)}, ${esc(x.weight)} lb`);
+    if(x.currentAge)b.push(`age ${esc(x.currentAge)}`);
+    let html=lead(`<b>${esc(x.fullName)}</b> — ${b.join(" · ")}.`);
+    const place=[x.birthCity,x.birthStateProvince,x.birthCountry].filter(Boolean).map(esc).join(", ");
+    let facts;
+    if(curated){facts=curated.slice();if(place)facts.push(`Born in ${place}.`);}
+    else{ // no curated set — build facts straight from the live feed
+      facts=[];
+      if(x.nickName)facts.push(`Goes by “${esc(x.nickName)}.”`);
+      if(place)facts.push(`Born in ${place}.`);
+      if(x.mlbDebutDate)facts.push(`Made his MLB debut back in ${esc(x.mlbDebutDate.slice(0,4))}.`);
+      if(x.draftYear)facts.push(`First drafted into pro ball in ${esc(x.draftYear)}.`);
+    }
+    return html+funHTML(facts);
+  }catch(e){
+    let html=lead(`<b>${esc(p.name)}</b> — ${esc(TEAMS[p.team].name)} ${esc(p.pos)}.`);
+    return html+(curated?funHTML(curated):"");
+  }
 }
 
 /* =================================================================
@@ -655,7 +742,14 @@ function gradeNew(plays){
       let win=false,add=0;
       if(choice===outcome){win=true;add=(outcome==="hr"?10:3);}
       else if(choice==="hit"&&outcome==="hr"){win=true;add=3;}
-      if(win){BONUS.predict+=add;BONUS.streak++;if(BONUS.streak>=3){add+=2;BONUS.predict+=2;}BONUS.lastResult=`✅ ${labelCat(outcome)} — +${add}${BONUS.streak>=3?" (streak!)":""}`;toast(`✅ Nailed it! +${add}`);}
+      if(win){
+        BONUS.predict+=add;BONUS.streak++;
+        if(BONUS.streak>=3){add+=2;BONUS.predict+=2;}
+        BONUS.lastResult=`✅ ${labelCat(outcome)} — +${add}${BONUS.streak>=3?" (streak!)":""}`;
+        if(ME)ME.callPts=BONUS.predict;      // correct calls now count toward the leaderboard
+        flashCall(ME,add,BONUS.streak>=3);
+        renderStandings();updateViewbar();
+      }
       else{BONUS.streak=0;BONUS.lastResult=`❌ It was a ${labelCat(outcome)}. Next one!`;}
       BONUS.pending=null;saveBonus();
     }
@@ -670,7 +764,7 @@ function renderPred(){
   box.innerHTML=`<div class="pred">
     <div style="display:flex;align-items:center;gap:11px">
       <div class="predface"><span>${esc((batter[0]||"?"))}</span>${cur.batter>0?`<img src="https://midfield.mlbstatic.com/v1/people/${cur.batter}/spots/120" alt="" onerror="this.remove()">`:""}</div>
-      <div><div class="q">Call this at-bat</div><div class="who">${esc(batter)} up · +3 · homer +10</div></div>
+      <div><div class="q">Call this at-bat</div><div class="who">${esc(batter)} up · +3 · homer +10 · counts toward your rank</div></div>
     </div>
     <div class="predbtns">${opts.map(o=>`<button data-c="${o[0]}" class="${BONUS.pending===o[0]?'sel':''}">${o[1]}</button>`).join("")}</div>
     <div class="predresult">${BONUS.pending?"Locked in — watch it play out ⚾":(BONUS.lastResult||"Tap your call before the pitch.")}</div></div>`;
@@ -685,19 +779,19 @@ function nameById(id){for(const p of PEOPLE)for(const pl of p.roster)if(pl.id===
 function renderStandings(){
   const el=$("#lbEl");
   if(curView==="indiv"){
-    const rows=PEOPLE.slice().sort((a,b)=>b.pts-a.pts);
+    const rows=PEOPLE.slice().sort((a,b)=>total(b)-total(a));
     el.innerHTML=rows.map((p,i)=>`<div class="lb ${ME&&p.pid===ME.pid?'me':''}">
       <div class="rank ${i===0?'g1':''}">${i+1}</div>
       <div class="av" style="border-color:${FAMILIES[p.fam].color}">${p.spirit}</div>
-      <div><div class="who">${esc(p.name)}</div><div class="sub">${FAMILIES[p.fam].animal} ${FAMILIES[p.fam].herd}${topPlayer(p)}</div></div>
-      <div class="score">${fmt(p.pts)}</div></div>`).join("");
+      <div><div class="who">${esc(p.name)}</div><div class="sub">${FAMILIES[p.fam].animal} ${FAMILIES[p.fam].herd}${p.callPts?` · 🎯 ${fmt(p.callPts)} calls`:""}${topPlayer(p)}</div></div>
+      <div class="score">${fmt(total(p))}</div></div>`).join("");
   }else{
-    const fam=FAMILIES.map((f,fi)=>{const mem=PEOPLE.filter(p=>p.fam===fi);const avg=mem.reduce((s,p)=>s+p.pts,0)/mem.length;
-      const top=mem.slice().sort((a,b)=>b.pts-a.pts)[0];return {fi,f,avg,top,n:mem.length};}).sort((a,b)=>b.avg-a.avg);
+    const fam=FAMILIES.map((f,fi)=>{const mem=PEOPLE.filter(p=>p.fam===fi);const avg=mem.reduce((s,p)=>s+total(p),0)/mem.length;
+      const top=mem.slice().sort((a,b)=>total(b)-total(a))[0];return {fi,f,avg,top,n:mem.length};}).sort((a,b)=>b.avg-a.avg);
     el.innerHTML=fam.map((r,i)=>`<div class="lb ${ME&&ME.fam===r.fi?'mine':''}">
       <div class="rank ${i===0?'g1':''}">${i+1}</div>
       <div class="av" style="border-color:${r.f.color};font-size:20px">${r.f.animal}</div>
-      <div><div class="who">${esc(r.f.name)}</div><div class="sub">${r.f.herd} · avg of ${r.n} · ⭐ ${esc(r.top.name)} ${fmt(r.top.pts)}</div></div>
+      <div><div class="who">${esc(r.f.name)}</div><div class="sub">${r.f.herd} · avg of ${r.n} · ⭐ ${esc(r.top.name)} ${fmt(total(r.top))}</div></div>
       <div class="score">${fmt(Math.round(r.avg*4)/4)}</div></div>`).join("");
   }
 }
@@ -763,6 +857,7 @@ async function enterApp(){
   show("app");
   await loadRosters();
   buildDraft();
+  loadAllCallPts();
   buildBingo(false);
   renderRoster();renderBoard();renderTicker();renderStandings();renderPred();renderSafari();updateViewbar();
   startLive();
